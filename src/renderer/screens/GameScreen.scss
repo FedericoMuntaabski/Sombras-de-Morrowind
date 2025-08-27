@@ -1,0 +1,158 @@
+.game-screen {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a0a;
+  color: #e0e0e0;
+
+  .game-header {
+    height: 60px;
+    background: rgba(0, 0, 0, 0.8);
+    border-bottom: 2px solid #d4af37;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 1.5rem;
+    z-index: 10;
+
+    .game-title {
+      font-size: 1.5rem;
+      font-weight: 300;
+      color: #d4af37;
+      letter-spacing: 0.1em;
+    }
+
+    .game-controls {
+      display: flex;
+      gap: 1rem;
+
+      .control-button {
+        padding: 0.5rem 1rem;
+        background: rgba(60, 60, 60, 0.8);
+        color: #e0e0e0;
+        border: 1px solid #555;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: rgba(80, 80, 80, 0.9);
+          border-color: #d4af37;
+          color: #fff;
+        }
+      }
+    }
+  }
+
+  .game-container {
+    flex: 1;
+    position: relative;
+    background: #2d1810;
+    
+    // Phaser canvas will be injected here
+    canvas {
+      display: block;
+      margin: 0 auto;
+    }
+  }
+
+  .game-ui {
+    height: 80px;
+    background: rgba(0, 0, 0, 0.9);
+    border-top: 1px solid #333;
+    display: flex;
+    align-items: center;
+    padding: 0 1.5rem;
+    z-index: 10;
+
+    .status-bar {
+      display: flex;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      .status-label {
+        font-size: 0.9rem;
+        color: #999;
+        font-weight: 400;
+      }
+
+      .status-value {
+        font-size: 0.9rem;
+        color: #d4af37;
+        font-weight: 500;
+      }
+    }
+  }
+}
+
+// Loading state for the game
+.game-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 100;
+
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #333;
+    border-top: 3px solid #d4af37;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+  }
+
+  .loading-text {
+    color: #d4af37;
+    font-size: 1rem;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .game-screen {
+    .game-header {
+      height: 50px;
+      padding: 0 1rem;
+
+      .game-title {
+        font-size: 1.2rem;
+      }
+
+      .control-button {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+      }
+    }
+
+    .game-ui {
+      height: 60px;
+      padding: 0 1rem;
+
+      .status-bar {
+        gap: 1rem;
+      }
+
+      .status-item {
+        .status-label,
+        .status-value {
+          font-size: 0.8rem;
+        }
+      }
+    }
+  }
+}

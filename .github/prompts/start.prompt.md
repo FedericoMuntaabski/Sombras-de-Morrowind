@@ -131,12 +131,39 @@ Desbloquear nuevas cartas de acción, equipo o habilidades
 Abrir rutas de diálogo más complejas o exclusivas
 Esto genera un loop de progresión donde la personalización y la estrategia en las cartas influyen en el desarrollo del personaje y las interacciones narrativas.
 
-### Fase 3: Mecánicas de Cartas y Combate
-- [ ] Sistema de cartas de acción (ataques, magia, curación, habilidades)
-- [ ] Implementar cartas de bendición y maldición (temporales y permanentes)
-- [ ] Sistema de combate por turnos cooperativo
-- [ ] Mecánicas de sinergia entre jugadores
-- [ ] Sistema de daño, curación y estados de efecto
+Fase 3: Creación de Sala y Selección de Preset
+
+- [ ] Implementar menú de creación de sala
+Campos: nombre de la sala, alias del jugador, máximo de jugadores (2–6)
+La sala se crea automáticamente como pública
+
+- [ ] Registro de la sala en el servidor mediante WebSockets
+Saca las que están creadas por defecto/bocetos creados en el botón de unirse a la sala
+
+- [ ] Instanciar lobby de la sala
+Modificar lo que es “Unirse a sala” para que:
+- Muestre las salas disponibles
+- Permita seleccionar una sala y unirse
+- Además, saca lo del código de sala
+Mostrar lista de jugadores conectados con sus alias y preset seleccionado
+Permitir que los jugadores se unan y seleccionen su preset/personaje (tienen que tener al menos uno creado, sino no les va a permitir)
+
+Cargar imagen nueva como fondo de pantalla de esta sala creada (waiting_room)
+Mostrar indicador de máximo de jugadores y cuántos han ingresado
+Botón de selección de preset para cada jugador
+Botón de iniciar partida, visible solo para el host, activo solo cuando todos los jugadores hayan seleccionado preset
+Chat o mensajes rápidos opcional para comunicación
+Botón de opciones del menú principal
+Asegurar que todos los cambios (jugadores nuevos, presets, estado listo) se actualicen en tiempo real
+
+- [ ] Selección de preset en el lobby
+Cada jugador elige su preset antes de iniciar la partida
+El host puede iniciar la partida solo cuando todos los jugadores hayan seleccionado un preset
+El host puede visualizar el preset seleccionado actualmente de todos los jugadores
+
+- [ ] Actualización en tiempo real del lobby
+Utilizar WebSockets para enviar actualizaciones a todos los jugadores conectados
+Asegurarse de que los cambios en la selección de presets se sincronicen correctamente entre todos los clientes
 
 ### Fase 4: Tablero Modular y Exploración
 - [ ] Crear sistema de mapa modular procedural
@@ -152,13 +179,20 @@ Esto genera un loop de progresión donde la personalización y la estrategia en 
 - [ ] Mecánicas de decisiones morales con consecuencias
 - [ ] Sistema de misiones opcionales y objetivos secundarios
 
-### Fase 6: Jefe Final y Condiciones de Victoria
+### Fase 6: Mecánicas de Cartas y Combate
+- [ ] Sistema de cartas de acción (ataques, magia, curación, habilidades)
+- [ ] Implementar cartas de bendición y maldición (temporales y permanentes)
+- [ ] Sistema de combate por turnos cooperativo
+- [ ] Mecánicas de sinergia entre jugadores
+- [ ] Sistema de daño, curación y estados de efecto
+
+### Fase 7: Jefe Final y Condiciones de Victoria
 - [ ] Implementar múltiples Jefes Finales (Daedra Lords, criaturas ancestrales)
 - [ ] Mecánicas de combate épico cooperativo
 - [ ] Sistema de condiciones de victoria/derrota
 - [ ] Balanceo final de dificultad y recompensas
 
-### Fase 7: Interfaz de Usuario y Experiencia
+### Fase 8: Interfaz de Usuario y Experiencia
 - [ ] Diseño de UI/UX para tablero de juego
 - [ ] Panel de personaje con atributos y cartas
 - [ ] Interfaz de chat y comunicación entre jugadores

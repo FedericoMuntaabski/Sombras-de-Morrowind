@@ -94,19 +94,57 @@ coverage/
 saves/
 userdata/
 screenshots/
+rooms/
+temp/
 
 # Asset source files (if using external tools)
 *.psd
 *.ai
 *.sketch
+*.xcf
+*.blend
+
+# Large audio source files (keep compressed versions)
+*.wav
+*.flac
+*.aiff
+assets/audio/source/
 
 # Local configuration
 config/local.json
+.env.local
+.env.development.local
+.env.production.local
 
 # Testing
 test-results/
 playwright-report/
+coverage/
 
 # Backup files
 *.bak
 *.backup
+*.orig
+
+# macOS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Audio editing temporary files
+*.tmp
+*.temp
+*.pkf
+*.reapeaks
+
+# Image editing cache
+*.cache
+*.tmp
+
+# Room data cache
+room-cache/

@@ -1,0 +1,268 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&display=swap');
+
+// Variables de colores
+$primary-gold: #daa520;
+$secondary-gold: #b8860b;
+$dark-gold: #9a7500;
+$stone-dark: #1a1614;
+$stone-medium: #2a251f;
+$stone-light: #3a342a;
+$text-light: #f5f5dc;
+$text-medium: #d4d0b8;
+$text-dark: #8b8b7a;
+$error-red: #cc5555;
+$success-green: #5c8a3a;
+
+.create-room-screen {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Cinzel', serif;
+
+  .create-room-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      linear-gradient(
+        rgba(0, 0, 0, 0.6), 
+        rgba(0, 0, 0, 0.8)
+      ),
+      url('/assets/images/backgrounds/create game room background.jpg') center/cover no-repeat;
+    z-index: 0;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(
+        ellipse at center,
+        rgba($primary-gold, 0.1) 0%,
+        rgba($primary-gold, 0.05) 40%,
+        transparent 80%
+      );
+    }
+  }
+
+  .create-room-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+    padding: 2rem;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .create-room-header {
+    text-align: center;
+    margin-bottom: 2rem;
+
+    .screen-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: $text-light;
+      margin: 0 0 0.5rem 0;
+      text-shadow: 
+        2px 2px 4px rgba(0, 0, 0, 0.8),
+        0 0 8px rgba($primary-gold, 0.3);
+      letter-spacing: 0.05em;
+    }
+
+    .screen-subtitle {
+      font-size: 1rem;
+      color: $text-medium;
+      margin: 0;
+      font-weight: 400;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+      line-height: 1.4;
+    }
+  }
+
+  .create-room-form {
+    width: 100%;
+    max-width: 450px;
+    background: linear-gradient(135deg, 
+      rgba($stone-dark, 0.9) 0%, 
+      rgba($stone-medium, 0.9) 50%, 
+      rgba($stone-dark, 0.9) 100%
+    );
+    padding: 2rem;
+    border-radius: 8px;
+    border: 2px solid rgba($secondary-gold, 0.3);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.5),
+      inset 0 1px 2px rgba($primary-gold, 0.1);
+
+    .error-message {
+      background: rgba($error-red, 0.2);
+      border: 1px solid rgba($error-red, 0.5);
+      border-radius: 4px;
+      padding: 0.75rem;
+      margin-bottom: 1.5rem;
+      
+      p {
+        color: color.adjust($error-red, $lightness: 10%);
+        margin: 0;
+        font-size: 0.9rem;
+        text-align: center;
+      }
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+
+      label {
+        display: block;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: $text-light;
+        margin-bottom: 0.5rem;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+      }
+
+      input, select {
+        width: 100%;
+        padding: 0.75rem;
+        font-size: 1rem;
+        font-family: 'Cinzel', serif;
+        background: rgba($stone-light, 0.8);
+        border: 2px solid rgba($secondary-gold, 0.4);
+        border-radius: 4px;
+        color: $text-light;
+        box-sizing: border-box;
+        transition: all 0.3s ease;
+
+        &:focus {
+          outline: none;
+          border-color: $primary-gold;
+          box-shadow: 0 0 8px rgba($primary-gold, 0.4);
+          background: rgba($stone-light, 0.9);
+        }
+
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        &::placeholder {
+          color: $text-dark;
+          font-style: italic;
+        }
+      }
+
+      select {
+        cursor: pointer;
+        
+        option {
+          background: $stone-medium;
+          color: $text-light;
+        }
+      }
+
+      &.checkbox-group {
+        .checkbox-label {
+          display: flex;
+          align-items: center;
+          cursor: pointer;
+          font-size: 0.95rem;
+          color: $text-medium;
+          transition: color 0.3s ease;
+
+          &:hover {
+            color: $text-light;
+          }
+
+          input[type="checkbox"] {
+            width: auto;
+            margin: 0 0.75rem 0 0;
+            transform: scale(1.2);
+            accent-color: $primary-gold;
+          }
+        }
+      }
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 2rem;
+
+      .medieval-button {
+        flex: 1;
+        max-width: 150px;
+      }
+    }
+  }
+
+  .create-room-footer {
+    text-align: center;
+    padding: 1rem 2rem;
+    z-index: 1;
+
+    .footer-text {
+      font-size: 0.85rem;
+      color: $text-dark;
+      margin: 0;
+      font-style: italic;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .create-room-screen {
+    .create-room-content {
+      padding: 1rem;
+    }
+
+    .create-room-header {
+      .screen-title {
+        font-size: 2rem;
+      }
+    }
+
+    .create-room-form {
+      padding: 1.5rem;
+      
+      .form-actions {
+        flex-direction: column;
+        
+        .medieval-button {
+          max-width: none;
+        }
+      }
+    }
+  }
+}
+
+@media (max-height: 600px) {
+  .create-room-screen {
+    .create-room-content {
+      justify-content: flex-start;
+      padding-top: 1rem;
+    }
+
+    .create-room-header {
+      margin-bottom: 1rem;
+    }
+
+    .create-room-form {
+      .form-group {
+        margin-bottom: 1rem;
+      }
+    }
+  }
+}

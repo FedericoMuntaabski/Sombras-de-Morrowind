@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useAppStore } from '@renderer/store/appStore';
+import { useAudioStore } from '@renderer/store/audioStore';
 import { logger } from '@shared/utils/logger';
 import { errorHandler } from '@shared/utils/errorHandler';
 
@@ -9,12 +10,15 @@ import MainMenuScreen from '@renderer/screens/MainMenuScreen';
 import SettingsScreen from '@renderer/screens/SettingsScreen';
 import GameScreen from '@renderer/screens/GameScreen';
 import AboutScreen from '@renderer/screens/AboutScreen';
+import CreateRoomScreen from '@renderer/screens/CreateRoomScreen';
+import JoinRoomScreen from '@renderer/screens/JoinRoomScreen';
 
 // Import global styles
 import '@renderer/styles/global.scss';
 
 const App: React.FC = () => {
   const { currentScreen, setCurrentScreen, setLoading } = useAppStore();
+  const { initializeAudio } = useAudioStore();
 
   useEffect(() => {
     logger.info('Application starting', 'App');
@@ -22,6 +26,10 @@ const App: React.FC = () => {
     // Initialize application
     const initializeApp = async (): Promise<void> => {
       try {
+        // Initialize audio system
+        await initializeAudio();
+        logger.info('Audio system initialized', 'App');
+        
         // Simulate initialization time
         await new Promise(resolve => setTimeout(resolve, 2000));
         
@@ -82,6 +90,10 @@ const App: React.FC = () => {
         return <GameScreen />;
       case 'about':
         return <AboutScreen />;
+      case 'createRoom':
+        return <CreateRoomScreen />;
+      case 'joinRoom':
+        return <JoinRoomScreen />;
       default:
         return <LoadingScreen />;
     }

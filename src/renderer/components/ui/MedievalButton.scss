@@ -1,0 +1,336 @@
+// Variables de colores medievales
+$stone-dark: #2c2416;
+$stone-medium: #3d3527;
+$stone-light: #4f4a39;
+$copper-base: #8b4513;
+$copper-light: #cd853f;
+$gold-accent: #daa520;
+$gold-bright: #ffd700;
+$rune-glow: #6b9bd1;
+$text-light: #f5f5dc;
+$text-shadow: #1a1a1a;
+
+// Mixins para efectos
+@mixin stone-texture {
+  background: linear-gradient(135deg, 
+    $stone-dark 0%, 
+    $stone-medium 25%, 
+    $stone-light 50%, 
+    $stone-medium 75%, 
+    $stone-dark 100%
+  );
+  background-size: 8px 8px;
+}
+
+@mixin embossed-border {
+  border: 2px solid;
+  border-color: $stone-light $stone-dark $stone-dark $stone-light;
+  border-radius: 0;
+  clip-path: polygon(
+    10px 0%, 
+    calc(100% - 10px) 0%, 
+    100% 10px, 
+    100% calc(100% - 10px), 
+    calc(100% - 10px) 100%, 
+    10px 100%, 
+    0% calc(100% - 10px), 
+    0% 10px
+  );
+}
+
+@mixin glow-effect($color: $rune-glow, $intensity: 0.5) {
+  box-shadow: 
+    0 0 5px rgba($color, $intensity),
+    0 0 10px rgba($color, $intensity * 0.7),
+    0 0 15px rgba($color, $intensity * 0.5),
+    inset 0 0 10px rgba($color, $intensity * 0.3);
+}
+
+// Componente principal
+.medieval-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-main);
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  outline: none;
+  transition: all 0.3s ease;
+  user-select: none;
+  
+  // Ensure proper focus for accessibility
+  &:focus-visible {
+    .medieval-button__glow {
+      opacity: 0.6;
+    }
+  }
+
+  // Fondo con textura de piedra
+  .medieval-button__background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    @include stone-texture;
+    border-radius: inherit;
+    z-index: 1;
+    transition: all 0.3s ease;
+  }
+
+  // Borde decorativo
+  .medieval-button__border {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    @include embossed-border;
+    z-index: 2;
+    border-color: $copper-base;
+    transition: all 0.3s ease;
+  }
+
+  // Contenido del texto
+  .medieval-button__content {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  // Texto principal
+  .medieval-button__text {
+    color: $text-light;
+    font-weight: inherit;
+    font-size: inherit;
+    text-shadow: 
+      1px 1px 2px $text-shadow,
+      0 0 4px rgba($gold-accent, 0.3);
+    transition: all 0.3s ease;
+    letter-spacing: 0.08em;
+    position: relative;
+    z-index: 10;
+    pointer-events: none;
+    line-height: 1.2;
+    
+    // Fallback para asegurar visibilidad
+    background-color: transparent !important;
+    opacity: 1 !important;
+    display: block !important;
+  }
+
+  // Efectos de partículas/runas (opcional)
+  .medieval-button__particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+    background: 
+      radial-gradient(circle at 20% 50%, rgba($rune-glow, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 50%, rgba($rune-glow, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 50% 20%, rgba($rune-glow, 0.1) 0%, transparent 50%);
+    background-size: 20px 20px, 25px 25px, 30px 30px;
+    transition: opacity 0.3s ease;
+  }
+
+  // Resplandor mágico
+  .medieval-button__glow {
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    @include glow-effect($rune-glow, 0.3);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 0;
+    border-radius: inherit;
+  }
+
+  // Estados del botón
+  &--hovered {
+    .medieval-button__background {
+      background: linear-gradient(135deg, 
+        color.adjust($stone-dark, $lightness: 5%) 0%, 
+        color.adjust($stone-medium, $lightness: 5%) 25%, 
+        color.adjust($stone-light, $lightness: 5%) 50%, 
+        color.adjust($stone-medium, $lightness: 5%) 75%, 
+        color.adjust($stone-dark, $lightness: 5%) 100%
+      );
+    }
+
+    .medieval-button__border {
+      border-color: $copper-light;
+    }
+
+    .medieval-button__text {
+      color: color.adjust($text-light, $lightness: 10%);
+      text-shadow: 
+        1px 1px 2px $text-shadow,
+        0 0 6px rgba($gold-bright, 0.5);
+    }
+
+    .medieval-button__glow {
+      opacity: 0.4;
+    }
+
+    .medieval-button__particles {
+      opacity: 0.6;
+    }
+  }
+
+  &--pressed {
+    .medieval-button__background {
+      background: linear-gradient(135deg, 
+        color.adjust($stone-dark, $lightness: -5%) 0%, 
+        color.adjust($stone-medium, $lightness: -5%) 25%, 
+        color.adjust($stone-light, $lightness: -5%) 50%, 
+        color.adjust($stone-medium, $lightness: -5%) 75%, 
+        color.adjust($stone-dark, $lightness: -5%) 100%
+      );
+    }
+
+    .medieval-button__text {
+      color: color.adjust($text-light, $lightness: -30%);
+    }
+
+    .medieval-button__border {
+      border-color: color.adjust($copper-base, $lightness: -20%);
+    }
+
+    .medieval-button__glow {
+      opacity: 0.1;
+    }
+  }
+
+  &--disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+
+    .medieval-button__background {
+      background: linear-gradient(135deg, 
+        color.adjust($stone-dark, $lightness: -10%) 0%, 
+        color.adjust($stone-medium, $lightness: -10%) 25%, 
+        color.adjust($stone-light, $lightness: -10%) 50%, 
+        color.adjust($stone-medium, $lightness: -10%) 75%, 
+        color.adjust($stone-dark, $lightness: -10%) 100%
+      );
+    }
+
+    .medieval-button__border {
+      border-color: color.adjust($copper-base, $lightness: -15%);
+    }
+
+    .medieval-button__text {
+      color: color.adjust($text-light, $lightness: -15%);
+    }
+
+    .medieval-button__glow {
+      opacity: 0;
+    }
+
+    .medieval-button__particles {
+      opacity: 0;
+    }
+  }
+
+  // Variantes de color
+  &--primary {
+    .medieval-button__border {
+      border-color: $gold-accent;
+    }
+
+    .medieval-button__text {
+      color: $gold-bright;
+      text-shadow: 
+        1px 1px 2px $text-shadow,
+        0 0 4px rgba($gold-bright, 0.4);
+    }
+
+    &.medieval-button--hovered {
+      .medieval-button__border {
+        border-color: $gold-bright;
+      }
+
+      .medieval-button__glow {
+        @include glow-effect($gold-bright, 0.4);
+        opacity: 0.5;
+      }
+    }
+  }
+
+  &--secondary {
+    .medieval-button__border {
+      border-color: $stone-light;
+    }
+
+    .medieval-button__text {
+      color: color.adjust($text-light, $lightness: -10%);
+    }
+  }
+
+  &--danger {
+    .medieval-button__border {
+      border-color: #c44;
+    }
+
+    .medieval-button__text {
+      color: #e55;
+    }
+
+    &.medieval-button--hovered {
+      .medieval-button__glow {
+        @include glow-effect(#e55, 0.4);
+        opacity: 0.5;
+      }
+    }
+  }
+
+  // Tamaños
+  &--small {
+    min-width: 80px;
+    height: 32px;
+    font-size: 0.85rem;
+    
+    .medieval-button__text {
+      padding: 0 0.75rem;
+    }
+  }
+
+  &--medium {
+    min-width: 120px;
+    height: 40px;
+    font-size: 1rem;
+    
+    .medieval-button__text {
+      padding: 0 1rem;
+    }
+  }
+
+  &--large {
+    min-width: 160px;
+    height: 48px;
+    font-size: 1.1rem;
+    
+    .medieval-button__text {
+      padding: 0 1.5rem;
+    }
+  }
+
+  &--full-width {
+    width: 100%;
+  }
+}

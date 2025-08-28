@@ -1,37 +1,36 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAppStore } from '@renderer/store/appStore';
+import { useAudioStore } from '@renderer/store/audioStore';
 import { logger } from '@shared/utils/logger';
+import MedievalButton from '@renderer/components/ui/MedievalButton';
 import './MainMenuScreen.scss';
 
 const MainMenuScreen: React.FC = () => {
   const { setCurrentScreen } = useAppStore();
+  const { initializeAudio, isInitialized } = useAudioStore();
 
-  const handleNewGame = (): void => {
-    logger.info('Starting new game', 'MainMenu');
-    setCurrentScreen('game');
+  // Inicializar audio al cargar el menú principal
+  useEffect(() => {
+    if (!isInitialized) {
+      initializeAudio().catch((error) => {
+        logger.error(`Failed to initialize audio in MainMenu: ${error}`, 'MainMenu');
+      });
+    }
+  }, [initializeAudio, isInitialized]);
+
+  const handleCreateRoom = (): void => {
+    logger.info('Navigating to Create Room', 'MainMenu');
+    setCurrentScreen('createRoom');
   };
 
-  const handleLoadGame = (): void => {
-    logger.info('Loading saved game', 'MainMenu');
-    // TODO: Implement game loading logic
-    setCurrentScreen('game');
+  const handleJoinRoom = (): void => {
+    logger.info('Navigating to Join Room', 'MainMenu');
+    setCurrentScreen('joinRoom');
   };
 
   const handleSettings = (): void => {
     logger.info('Opening settings', 'MainMenu');
     setCurrentScreen('settings');
-  };
-
-  const handleAbout = (): void => {
-    logger.info('Opening about screen', 'MainMenu');
-    setCurrentScreen('about');
-  };
-
-  const handleQuit = (): void => {
-    logger.info('Quitting application', 'MainMenu');
-    if (window.electronAPI) {
-      window.electronAPI.quitApp();
-    }
   };
 
   return (
@@ -45,25 +44,26 @@ const MainMenuScreen: React.FC = () => {
         </div>
 
         <nav className="menu-navigation">
-          <button className="menu-button primary" onClick={handleNewGame}>
-            Nueva Partida
-          </button>
+          <MedievalButton
+            text="Crear Sala"
+            onClick={handleCreateRoom}
+            variant="primary"
+            size="large"
+          />
           
-          <button className="menu-button" onClick={handleLoadGame}>
-            Cargar Partida
-          </button>
+          <MedievalButton
+            text="Unirse a Sala"
+            onClick={handleJoinRoom}
+            variant="primary"
+            size="large"
+          />
           
-          <button className="menu-button" onClick={handleSettings}>
-            Configuración
-          </button>
-          
-          <button className="menu-button" onClick={handleAbout}>
-            Acerca de
-          </button>
-          
-          <button className="menu-button danger" onClick={handleQuit}>
-            Salir
-          </button>
+          <MedievalButton
+            text="Opciones"
+            onClick={handleSettings}
+            variant="secondary"
+            size="medium"
+          />
         </nav>
       </div>
 

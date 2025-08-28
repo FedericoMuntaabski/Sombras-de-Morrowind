@@ -1,4 +1,21 @@
-// Import Google Fonts
+// Import Custom Fonts
+@font-face {
+  font-family: 'MainFont';
+  src: url('/assets/fonts/main_font.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SecondaryFont';
+  src: url('/assets/fonts/secundary_font.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+// Import Google Fonts as fallback
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@300;400;500;600&display=swap');
 
 // Global variables
@@ -19,6 +36,10 @@
   --error-color: #c44;
   --success-color: #4caf50;
   --warning-color: #ff9800;
+  
+  // Font families
+  --font-main: 'MainFont', 'Cinzel', serif;
+  --font-secondary: 'SecondaryFont', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 // Global reset and base styles
@@ -35,7 +56,7 @@ html {
 
 body {
   height: 100%;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-secondary);
   background: var(--dark-bg);
   color: var(--text-primary);
   line-height: 1.6;
@@ -55,7 +76,7 @@ body {
 
 // Typography
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Cinzel', serif;
+  font-family: var(--font-main);
   font-weight: 300;
   letter-spacing: 0.05em;
   color: var(--primary-gold);

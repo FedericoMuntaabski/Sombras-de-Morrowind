@@ -58,13 +58,17 @@ class Application {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
+        allowRunningInsecureContent: false,
+        experimentalFeatures: false,
         preload: path.join(__dirname, 'preload.js'),
+        webSecurity: true,
+        sandbox: false // Necesario para preload script
       },
     });
 
     // Load the app
     if (isDev) {
-      this.mainWindow.loadURL('http://localhost:3000');
+      this.mainWindow.loadURL('http://localhost:8080');
       // Open DevTools in development
       this.mainWindow.webContents.openDevTools();
     } else {

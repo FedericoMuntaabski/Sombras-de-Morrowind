@@ -12,20 +12,124 @@ Sombras de Morrowind es un juego de mesa digital cooperativo inspirado en el uni
 - [ ] Integrar Phaser.js para el motor gráfico 2D
 - [ ] Configurar WebSockets para multijugador cooperativo
 - [ ] Implementar sistema de logging y debugging
+- [ ] Integrar sistema de gestión de errores
+- [ ] Menu principal
+- [ ] Pantalla de carga
+- [ ] Pantalla de configuración
+- [ ] Ejecutar la aplicacion
+
 
 ### Fase 2: Sistema de Personajes y Atributos
-- [ ] Crear sistema de razas (Humano, Dunmer, Khajiit, Argoniano, Orco)
-- [ ] Implementar clases/roles (Guerrero, Hechicero, Scout, Clérigo, Diplomático)
-- [ ] Desarrollar sistema de facciones de origen
-- [ ] Implementar sistema SPECIAL adaptado:
-  - Strength (Fuerza): Daño físico y capacidad de carga
-  - Perception (Percepción): Detección de trampas y críticos
-  - Endurance (Resistencia): Vida máxima y resistencia ambiental
-  - Charisma (Carisma): Influencia sobre NPCs
-  - Intelligence (Inteligencia): Efectividad mágica
-  - Agility (Agilidad): Movimiento y evasión
-  - Luck (Suerte): Eventos positivos y críticos
-- [ ] Sistema de progresión basado en experiencia
+- [ ] Crear sistema de razas
+Razas y bonificaciones (SPECIAL)
+Humano
+Bonificaciones: Luck +1
+Debilidades: Intelligence -1
+Estilo: versátil, equilibrado en combate y diplomacia, sin especialización marcada.
+
+Dunmer (Elfo Oscuro)
+Bonificaciones: Intelligence +1
+Debilidades: Endurance -1
+Estilo: buena afinidad mágica y astucia, menos resistente físicamente.
+
+Khajiit
+Bonificaciones: Agility +1
+Debilidades: Strength -1
+Estilo: sigiloso y ágil, buenos críticos y evasión, menor daño físico.
+
+Argoniano
+Bonificaciones: Endurance +1
+Debilidades: Charisma -1
+Estilo: resistente y capaz de sobrevivir en ambientes hostiles, menos persuasivo.
+
+Orco
+Bonificaciones: Strength +1
+Debilidades: Intelligence -1
+Estilo: fuerte y resistente en combate cuerpo a cuerpo, limitado en magia.
+
+Altmer (Alto Elfo)
+Bonificaciones: Intelligence +1
+Debilidades: Endurance -1
+Estilo: excelentes hechiceros, frágiles físicamente.
+
+Bosmer (Elfo del Bosque)
+Bonificaciones: Agility +1
+Debilidades: Endurance -1
+Estilo: expertos en exploración y ataque a distancia, menos resistentes.
+
+Breton
+Bonificaciones: Charisma +1
+Debilidades: Strength -1
+Estilo: buenos negociadores y diplomáticos, menos eficaces en combate físico.
+
+Nórdico
+Bonificaciones: Endurance +1
+Debilidades: Agility -1
+Estilo: resistentes al daño físico y ambiental, menos ágiles en combate o evasión.
+
+
+- [ ] Desarrollar sistema de facciones de origen, se le asignan por defecto a los personajes por su raza
+Humano
+Facción de origen: Mercaderes de la Capital
+Descripción: Crecieron en centros urbanos, expertos en comercio y diplomacia. Algunos diálogos de negociación y rutas políticas solo se desbloquean para esta facción.
+
+Dunmer (Elfo Oscuro)
+Facción de origen: Casas Nobles
+Descripción: Miembros de antiguas casas influyentes, con prestigio y conocimiento político. Enfocados en intriga y diplomacia. Algunos NPC solo aceptan trato con Dunmer de esta facción.
+
+Khajiit
+Facción de origen: Caravanas del Desierto
+Descripción: Expertos comerciantes y exploradores, especializados en movilidad y sigilo. Acceso a diálogos relacionados con comercio y contrabando. 
+
+Argoniano
+Facción de origen: Tribu de la Laguna
+Descripción: Su cultura se basa en supervivencia y conocimiento de territorios hostiles. Algunos secretos o rutas de exploración solo están disponibles para Argonianos de esta facción. 
+
+Orco
+Facción de origen: Clanes Guerreros
+Descripción: Guerreros y defensores de territorios tribales. Acceso a misiones de combate, torneos o desafíos de honor exclusivos de esta facción.
+
+Altmer (Alto Elfo)
+Facción de origen: Consejo de Magos
+Descripción: Conocimiento arcano y política mágica. Especializados en magia pura y estudios arcánicos formales. Diálogos y misiones relacionadas con hechicería solo accesibles para miembros de esta facción.
+
+Bosmer (Elfo del Bosque)
+Facción de origen: Guardianes del Bosque
+Descripción: Protectores de los bosques y expertos en sigilo. Opciones de exploración y negociación con criaturas del bosque limitadas a esta facción.
+
+Breton
+Facción de origen: Nobleza y Artesanos
+Descripción: Especialistas en diplomacia, comercio y artes mágicas menores. Algunos diálogos con NPCs nobles o comerciantes solo se desbloquean para esta facción.
+
+Nórdico
+Facción de origen: Clanes del Norte
+Descripción: Resistentes y guerreros de las regiones frías. Acceso a misiones relacionadas con combate, exploración de montañas y tradición nórdica.
+
+Sistema SPECIAL(arranca en 1 punto cada SPECIAL y tiene como maximo 10 puntos, este limite no se puede superar, arrancan con 12 puntos para distribuir entre los diferentes SPECIAL de la forma que el jugador desee)
+
+Cada atributo define habilidades clave que se usarán tanto en combate como en interacciones de cartas y diálogos.
+
+Strength (Fuerza): Representa la potencia física y la capacidad bruta. Aumenta el daño de las cartas de ataque cuerpo a cuerpo, permite portar más objetos y superar obstáculos que requieren fuerza descomunal. Un personaje fuerte puede abrir caminos bloqueados y aplastar resistencias con pura potencia.
+
+Perception (Percepción): Mide la agudeza de los sentidos y la atención al detalle. Es clave en skillchecks para detectar trampas, descubrir cartas ocultas y anticipar movimientos enemigos. Una percepción elevada abre ventajas estratégicas y revela oportunidades que otros pasarían por alto.
+
+Endurance (Resistencia): Define la vitalidad y la capacidad de soportar condiciones adversas. Controla la vida máxima de personajes/cartas y ofrece resistencia frente a venenos, daños ambientales o efectos debilitantes. Un personaje con gran resistencia puede mantenerse firme incluso en combates prolongados.
+
+Charisma (Carisma): muy útil para skillchecks en diálogos, influencia sobre NPCs, desbloquear opciones de historia o obtener recompensas adicionales.Un carisma elevado abre rutas de diálogo únicas, facilita persuadir rivales, negociar mejores tratos y generar alianzas inesperadas.
+
+Intelligence (Inteligencia): Define el ingenio y la capacidad de comprender lo arcano o lo complejo. Aumenta la efectividad de cartas mágicas, facilita resolver acertijos y superar skillchecks relacionados con conocimiento. Un personaje inteligente puede desbloquear soluciones creativas y dominar con estrategias bien calculadas.
+
+Agility (Agilidad): Determina la velocidad de reacción y la capacidad de esquivar ataques. Influye en la evasión, la iniciativa en los turnos y el uso de cartas rápidas o de contraataque. Una alta agilidad permite reposicionarse con ventaja y aprovechar huecos en la defensa enemiga.
+
+Luck (Suerte): Interviene en eventos aleatorios de cartas y diálogos, aumenta la probabilidad de resultados críticos y de obtener recompensas poco comunes. Puede convertir un fallo en un resultado inesperadamente favorable y otorga pequeñas ventajas en situaciones de azar o loot.
+
+Sistema de progresión basado en experiencia
+Cada personaje gana XP por completar misiones, derrotar enemigos o superar skillchecks.
+La experiencia permite:
+Subir atributos SPECIAL (sin superar máximo)
+Desbloquear nuevas cartas de acción, equipo o habilidades
+Abrir rutas de diálogo más complejas o exclusivas
+Esto genera un loop de progresión donde la personalización y la estrategia en las cartas influyen en el desarrollo del personaje y las interacciones narrativas.
 
 ### Fase 3: Mecánicas de Cartas y Combate
 - [ ] Sistema de cartas de acción (ataques, magia, curación, habilidades)
@@ -89,7 +193,7 @@ Sombras de Morrowind es un juego de mesa digital cooperativo inspirado en el uni
 
 ### Rendimiento
 - **FPS Target**: 60 FPS estables durante el gameplay
-- **Memoria**: Uso eficiente de memoria, máximo 512MB RAM
+- **Memoria**: Uso eficiente de memoria, máximo 1024MB RAM
 - **Carga**: Tiempo de inicio < 5 segundos
 - **Latencia**: < 100ms para acciones multijugador en red local
 - **Escalabilidad**: Soporte para 2-6 jugadores simultáneos

@@ -12,6 +12,8 @@ import GameScreen from '@renderer/screens/GameScreen';
 import AboutScreen from '@renderer/screens/AboutScreen';
 import CreateRoomScreen from '@renderer/screens/CreateRoomScreen';
 import JoinRoomScreen from '@renderer/screens/JoinRoomScreen';
+import CharacterCreationScreen from '@renderer/screens/CharacterCreationScreen';
+import CharacterManagementScreen from '@renderer/screens/CharacterManagementScreen';
 
 // Import global styles
 import '@renderer/styles/global.scss';
@@ -94,6 +96,10 @@ const App: React.FC = () => {
         return <CreateRoomScreen />;
       case 'joinRoom':
         return <JoinRoomScreen />;
+      case 'characterCreation':
+        return <CharacterCreationScreen />;
+      case 'characterManagement':
+        return <CharacterManagementScreen />;
       default:
         return <LoadingScreen />;
     }

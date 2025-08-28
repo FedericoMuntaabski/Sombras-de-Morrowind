@@ -47,7 +47,7 @@ export interface GraphicsSettings {
 }
 
 // Application state
-export type AppScreen = 'loading' | 'menu' | 'settings' | 'game' | 'about' | 'createRoom' | 'joinRoom';
+export type AppScreen = 'loading' | 'menu' | 'settings' | 'game' | 'about' | 'createRoom' | 'joinRoom' | 'characterCreation' | 'characterManagement';
 
 export interface AppState {
   currentScreen: AppScreen;

@@ -28,6 +28,16 @@ const MainMenuScreen: React.FC = () => {
     setCurrentScreen('joinRoom');
   };
 
+  const handleCreateCharacter = (): void => {
+    logger.info('Navigating to Character Creation', 'MainMenu');
+    setCurrentScreen('characterCreation');
+  };
+
+  const handleManageCharacters = (): void => {
+    logger.info('Navigating to Character Management', 'MainMenu');
+    setCurrentScreen('characterManagement');
+  };
+
   const handleSettings = (): void => {
     logger.info('Opening settings', 'MainMenu');
     setCurrentScreen('settings');
@@ -44,6 +54,20 @@ const MainMenuScreen: React.FC = () => {
         </div>
 
         <nav className="menu-navigation">
+          <MedievalButton
+            text="Crear Personaje"
+            onClick={handleCreateCharacter}
+            variant="primary"
+            size="large"
+          />
+
+          <MedievalButton
+            text="Gestionar Personajes"
+            onClick={handleManageCharacters}
+            variant="primary"
+            size="large"
+          />
+
           <MedievalButton
             text="Crear Sala"
             onClick={handleCreateRoom}

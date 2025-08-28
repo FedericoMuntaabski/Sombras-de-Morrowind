@@ -73,8 +73,8 @@ class AudioManager {
       this.sfxAudio.volume = this.settings.sfxVolume;
       this.sfxAudio.addEventListener('error', this.onAudioError.bind(this));
 
-      // Mezclar aleatoriamente las pistas
-      this.shuffleTracks();
+      // NO mezclar las pistas - mantener orden secuencial 1,2,3,4,1,2,3,4...
+      this.currentTrackIndex = 0;
 
       this.isInitialized = true;
       logger.info('Audio Manager initialized successfully', 'AudioManager');
@@ -118,8 +118,12 @@ class AudioManager {
   }
 
   public async nextTrack(): Promise<void> {
+    // Avanzar al siguiente track secuencialmente (1,2,3,4,1,2,3,4...)
     this.currentTrackIndex = (this.currentTrackIndex + 1) % this.musicTracks.length;
-    if (this.backgroundMusic && !this.backgroundMusic.paused) {
+    const trackName = this.musicTracks[this.currentTrackIndex].name;
+    logger.info(`Moving to next track: ${trackName} (${this.currentTrackIndex + 1}/${this.musicTracks.length})`, 'AudioManager');
+    
+    if (this.backgroundMusic && this.settings.isMusicEnabled) {
       await this.startBackgroundMusic();
     }
   }
@@ -197,15 +201,6 @@ class AudioManager {
     if (event.target === this.backgroundMusic) {
       setTimeout(() => this.nextTrack(), 1000);
     }
-  }
-
-  private shuffleTracks(): void {
-    for (let i = this.musicTracks.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [this.musicTracks[i], this.musicTracks[j]] = [this.musicTracks[j], this.musicTracks[i]];
-    }
-    this.currentTrackIndex = 0;
-    logger.debug('Music tracks shuffled', 'AudioManager');
   }
 
   private loadSettings(): void {

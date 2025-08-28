@@ -269,8 +269,26 @@ export enum GameEventType {
   PLAYER_READY = 'player_ready',
   PLAYER_READY_CHANGED = 'player_ready_changed',
   
+  // Selección de presets/personajes
+  PRESET_SELECT = 'preset_select',
+  PRESET_SELECTED = 'preset_selected',
+  PRESET_UPDATE = 'preset_update',
+  
+  // Persistencia de personajes
+  CHARACTER_SAVE = 'character_save',
+  CHARACTER_SAVED = 'character_saved',
+  CHARACTER_LOAD = 'character_load',
+  CHARACTER_LOADED = 'character_loaded',
+  CHARACTER_VALIDATE = 'character_validate',
+  CHARACTER_VALIDATED = 'character_validated',
+  
+  // Actualizaciones del lobby
+  LOBBY_UPDATE = 'lobby_update',
+  LOBBY_READY = 'lobby_ready',
+  
   // Juego
   GAME_STARTED = 'game_started',
+  START_GAME = 'start_game',
   GAME_ACTION = 'game_action',
   GAME_STATE_UPDATE = 'game_state_update',
   TURN_CHANGED = 'turn_changed',
@@ -280,6 +298,7 @@ export enum GameEventType {
   
   // Chat
   CHAT_MESSAGE = 'chat_message',
+  CHAT_NOTIFICATION = 'chat_notification',
   
   // Errores
   ERROR = 'error',
@@ -351,6 +370,36 @@ export interface JoinRoomRequest {
   roomId: string;
   playerName: string;
   password?: string;
+}
+
+// Interfaces para presets/personajes
+export interface CharacterPreset {
+  id: string;
+  name: string;
+  race: string;
+  class: string;
+  skills: PlayerSkills;
+  equipment: GameItem[];
+  avatar?: string;
+}
+
+export interface PresetSelectRequest {
+  presetId: string;
+}
+
+export interface LobbyState {
+  players: LobbyPlayer[];
+  allPlayersReady: boolean;
+  canStartGame: boolean;
+}
+
+export interface LobbyPlayer {
+  id: string;
+  name: string;
+  isHost: boolean;
+  isReady: boolean;
+  selectedPreset?: CharacterPreset;
+  joinedAt: number;
 }
 
 // Tipos para el cliente

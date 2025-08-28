@@ -23,6 +23,9 @@ const JoinRoomScreen: React.FC = () => {
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [connectionMode, setConnectionMode] = useState<'rooms' | 'ip'>('rooms');
+  const [serverIP, setServerIP] = useState('');
+  const [serverPort, setServerPort] = useState('3000');
 
   // Cargar salas disponibles al montar el componente
   useEffect(() => {
@@ -59,7 +62,7 @@ const JoinRoomScreen: React.FC = () => {
     try {
       await joinRoom(searchCode.trim());
       logger.info(`Joined room by code: ${searchCode}`, 'JoinRoomScreen');
-      setCurrentScreen('menu'); // Por ahora vuelve al menú
+      setCurrentScreen('waiting'); // Navigate to waiting room instead of menu
     } catch (error) {
       setError('No se pudo unir a la sala. Verifica el código.');
       logger.error(`Failed to join room by code: ${error}`, 'JoinRoomScreen');
@@ -67,6 +70,42 @@ const JoinRoomScreen: React.FC = () => {
       setIsJoining(false);
     }
   }, [searchCode, playerName, joinRoom, setCurrentScreen]);
+
+  const handleJoinByIP = useCallback(async () => {
+    if (!serverIP.trim()) {
+      setError('Ingresa la IP del servidor');
+      return;
+    }
+
+    if (!playerName.trim()) {
+      setError('Ingresa tu nombre');
+      return;
+    }
+
+    const port = parseInt(serverPort) || 3000;
+    if (port < 1 || port > 65535) {
+      setError('Puerto inválido (debe estar entre 1 y 65535)');
+      return;
+    }
+
+    setIsJoining(true);
+    setError(null);
+
+    try {
+      // TODO: Implementar conexión directa por IP
+      // Por ahora simularemos la conexión
+      logger.info(`Connecting to ${serverIP}:${port}`, 'JoinRoomScreen');
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate connection time
+      
+      logger.info(`Connected to server at ${serverIP}:${port}`, 'JoinRoomScreen');
+      setCurrentScreen('waiting');
+    } catch (error) {
+      setError('No se pudo conectar al servidor. Verifica la IP y puerto.');
+      logger.error(`Failed to connect to ${serverIP}:${port}: ${error}`, 'JoinRoomScreen');
+    } finally {
+      setIsJoining(false);
+    }
+  }, [serverIP, serverPort, playerName, setCurrentScreen]);
 
   const handleJoinRoom = useCallback(async (room: Room) => {
     if (!playerName.trim()) {
@@ -164,105 +203,184 @@ const JoinRoomScreen: React.FC = () => {
         )}
 
         <div className="join-methods">
-          {/* Unirse por código */}
-          <div className="join-by-code">
-            <h3>Unirse con Código</h3>
-            
-            <div className="form-group">
-              <label htmlFor="playerName">Tu Nombre</label>
-              <input
-                id="playerName"
-                type="text"
-                value={playerName}
-                onChange={handlePlayerNameChange}
-                placeholder="Ingresa tu nombre"
-                maxLength={20}
-                disabled={isJoining}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="searchCode">Código de Sala</label>
-              <input
-                id="searchCode"
-                type="text"
-                value={searchCode}
-                onChange={(e) => setSearchCode(e.target.value)}
-                placeholder="Ingresa el código"
-                disabled={isJoining}
-              />
-            </div>
-
+          {/* Mode Toggle */}
+          <div className="mode-toggle">
             <MedievalButton
-              text={isJoining ? "Uniéndose..." : "Unirse"}
-              onClick={handleJoinByCode}
-              variant="primary"
+              text="Lista de Salas"
+              onClick={() => setConnectionMode('rooms')}
+              variant={connectionMode === 'rooms' ? 'primary' : 'secondary'}
+              size="medium"
+              disabled={isJoining}
+            />
+            <MedievalButton
+              text="Conectar por IP"
+              onClick={() => setConnectionMode('ip')}
+              variant={connectionMode === 'ip' ? 'primary' : 'secondary'}
               size="medium"
               disabled={isJoining}
             />
           </div>
 
-          {/* Lista de salas públicas */}
-          <div className="room-list">
-            <div className="room-list-header">
-              <h3>Salas Públicas Disponibles</h3>
-              <div className="room-controls">
+          {connectionMode === 'ip' ? (
+            /* Conexión directa por IP/Puerto */
+            <div className="ip-connection">
+              <h3>Conectar por IP y Puerto</h3>
+              <p className="connection-hint">
+                Pide a tu amigo que comparta su IP pública y puerto del servidor
+              </p>
+              
+              <div className="form-group">
+                <label htmlFor="playerNameIP">Tu Nombre</label>
                 <input
+                  id="playerNameIP"
                   type="text"
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  placeholder="Filtrar salas..."
-                  className="search-input"
+                  value={playerName}
+                  onChange={handlePlayerNameChange}
+                  placeholder="Ingresa tu nombre"
+                  maxLength={20}
                   disabled={isJoining}
                 />
-                <MedievalButton
-                  text="Actualizar"
-                  onClick={handleRefreshRooms}
-                  variant="secondary"
-                  size="small"
-                  disabled={isLoadingRooms || isJoining}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="serverIP">IP del Servidor</label>
+                <input
+                  id="serverIP"
+                  type="text"
+                  value={serverIP}
+                  onChange={(e) => setServerIP(e.target.value)}
+                  placeholder="192.168.1.100 o 203.0.113.1"
+                  disabled={isJoining}
                 />
               </div>
-            </div>
 
-            <div className="rooms-container">
-              {isLoadingRooms ? (
-                <div className="loading-message">
-                  <p>Cargando salas...</p>
-                </div>
-              ) : filteredRooms.length === 0 ? (
-                <div className="no-rooms-message">
-                  <p>No hay salas disponibles</p>
-                  <p className="hint">Crea una nueva sala o busca con un código específico</p>
-                </div>
-              ) : (
-                filteredRooms.map((room) => (
-                  <div key={room.id} className="room-item">
-                    <div className="room-info">
-                      <div className="room-name">
-                        {room.name}
-                        {room.hasPassword && <span className="password-icon">🔒</span>}
-                      </div>
-                      <div className="room-details">
-                        <span className="players">{room.currentPlayers}/{room.maxPlayers} jugadores</span>
-                        <span className="host">Host: {room.host}</span>
-                        <span className="created">{formatTimeAgo(room.createdAt)}</span>
-                      </div>
-                    </div>
-                    <div className="room-actions">
-                      <MedievalButton
-                        text="Unirse"
-                        onClick={() => handleJoinRoom(room)}
-                        variant="primary"
-                        size="small"
-                        disabled={isJoining}
-                      />
-                    </div>
-                  </div>
-                ))
-              )}
+              <div className="form-group">
+                <label htmlFor="serverPort">Puerto</label>
+                <input
+                  id="serverPort"
+                  type="number"
+                  value={serverPort}
+                  onChange={(e) => setServerPort(e.target.value)}
+                  placeholder="3000"
+                  min="1"
+                  max="65535"
+                  disabled={isJoining}
+                />
+              </div>
+
+              <MedievalButton
+                text={isJoining ? "Conectando..." : "Conectar al Servidor"}
+                onClick={handleJoinByIP}
+                variant="primary"
+                size="large"
+                disabled={isJoining}
+              />
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Unirse por código */}
+              <div className="join-by-code">
+                <h3>Unirse con Código</h3>
+                
+                <div className="form-group">
+                  <label htmlFor="playerName">Tu Nombre</label>
+                  <input
+                    id="playerName"
+                    type="text"
+                    value={playerName}
+                    onChange={handlePlayerNameChange}
+                    placeholder="Ingresa tu nombre"
+                    maxLength={20}
+                    disabled={isJoining}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="searchCode">Código de Sala</label>
+                  <input
+                    id="searchCode"
+                    type="text"
+                    value={searchCode}
+                    onChange={(e) => setSearchCode(e.target.value)}
+                    placeholder="Ingresa el código"
+                    disabled={isJoining}
+                  />
+                </div>
+
+                <MedievalButton
+                  text={isJoining ? "Uniéndose..." : "Unirse"}
+                  onClick={handleJoinByCode}
+                  variant="primary"
+                  size="medium"
+                  disabled={isJoining}
+                />
+              </div>
+            </>
+          )}
+
+          {connectionMode === 'rooms' && (
+            /* Lista de salas públicas */
+            <div className="room-list">
+              <div className="room-list-header">
+                <h3>Salas Públicas Disponibles</h3>
+                <div className="room-controls">
+                  <input
+                    type="text"
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    placeholder="Filtrar salas..."
+                    className="search-input"
+                    disabled={isJoining}
+                  />
+                  <MedievalButton
+                    text="Actualizar"
+                    onClick={handleRefreshRooms}
+                    variant="secondary"
+                    size="small"
+                    disabled={isLoadingRooms || isJoining}
+                  />
+                </div>
+              </div>
+
+              <div className="rooms-container">
+                {isLoadingRooms ? (
+                  <div className="loading-message">
+                    <p>Cargando salas...</p>
+                  </div>
+                ) : filteredRooms.length === 0 ? (
+                  <div className="no-rooms-message">
+                    <p>No hay salas disponibles</p>
+                    <p className="hint">Crea una nueva sala o busca con un código específico</p>
+                  </div>
+                ) : (
+                  filteredRooms.map((room) => (
+                    <div key={room.id} className="room-item">
+                      <div className="room-info">
+                        <div className="room-name">
+                          {room.name}
+                          {room.hasPassword && <span className="password-icon">🔒</span>}
+                        </div>
+                        <div className="room-details">
+                          <span className="players">{room.currentPlayers}/{room.maxPlayers} jugadores</span>
+                          <span className="host">Host: {room.host}</span>
+                          <span className="created">{formatTimeAgo(room.createdAt)}</span>
+                        </div>
+                      </div>
+                      <div className="room-actions">
+                        <MedievalButton
+                          text="Unirse"
+                          onClick={() => handleJoinRoom(room)}
+                          variant="primary"
+                          size="small"
+                          disabled={isJoining}
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="back-action">

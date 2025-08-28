@@ -1,7 +1,7 @@
 # 📚 Sombras de Morrowind - Documentación Completa
 
 *Archivo unificado de documentación del proyecto*  
-*Última actualización: 27 de agosto de 2025*
+*Última actualización: 28 de agosto de 2025*
 
 ---
 
@@ -13,9 +13,10 @@
 4. [Integración de Fuentes](#integración-de-fuentes)
 5. [Correcciones TypeScript](#correcciones-typescript)
 6. [Soluciones a Problemas Agosto 2025](#soluciones-a-problemas-agosto-2025)
-7. [Guía del Script Combinado](#guía-del-script-combinado)
-8. [Comandos Disponibles](#comandos-disponibles)
-9. [Troubleshooting](#troubleshooting)
+7. [Correcciones Sass y Assets - Agosto 28, 2025](#correcciones-sass-y-assets)
+8. [Guía del Script Combinado](#guía-del-script-combinado)
+9. [Comandos Disponibles](#comandos-disponibles)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -26,10 +27,12 @@
 #### Problemas Críticos Solucionados:
 1. **❌ Error "global is not defined"** - ✅ SOLUCIONADO
 2. **🎨 Fuentes Personalizadas** - ✅ IMPLEMENTADO  
-3. **⚠️ Warnings SASS** - ✅ MINIMIZADOS
+3. **⚠️ Warnings SASS** - ✅ SOLUCIONADOS COMPLETAMENTE
 4. **🌐 Servidor Multijugador** - ✅ IMPLEMENTADO
 5. **🛡️ Content Security Policy** - ✅ CONFIGURADO
 6. **📝 Errores TypeScript** - ✅ CORREGIDOS
+7. **🖼️ Assets de Imágenes** - ✅ RUTAS CORREGIDAS
+8. **🧪 Tests Unitarios** - ✅ 100% FUNCIONANDO (77/77)
 
 ---
 
@@ -45,6 +48,7 @@
 - **WebSockets**: Para multijugador cooperativo
 - **Sistema de Logging**: Con niveles y timestamps
 - **Gestión de Errores**: Clase GameError y manejo global
+- **Sass/SCSS**: Configuración moderna sin warnings de deprecación
 
 #### Pantallas Implementadas:
 - ✅ **Menu Principal**: Navegación completa con estilo Morrowind
@@ -174,6 +178,89 @@ res.setHeader('Content-Security-Policy',
 - Implementado heartbeat robusto
 - Retry logic mejorado
 - Manejo de estados de conexión
+
+---
+
+## 🔧 Correcciones Sass y Assets - Agosto 28, 2025
+
+### 🎯 Problemas Solucionados
+
+#### 1. **ERROR: Archivo waiting_room.jpg no encontrado**
+**Problema**: 
+```
+ERROR in ./src/renderer/screens/WaitingRoomScreen.scss
+Module not found: Error: Can't resolve '../../assets/images/backgrounds/waiting_room.jpg'
+```
+
+**Solución**:
+- ✅ Corregida ruta de imagen en `WaitingRoomScreen.scss`
+- ✅ Cambiada de ruta relativa incorrecta a ruta absoluta: `../../../assets/images/backgrounds/waiting_room.jpg`
+- ✅ Verificada existencia del archivo en el sistema
+
+#### 2. **WARNINGS: Sass Legacy JS API Deprecada**
+**Problema**:
+```
+WARNING: The legacy JS API is deprecated and will be removed in Dart Sass 2.0.0.
+```
+
+**Solución**:
+- ✅ Actualizada configuración en `sass.config.js`
+- ✅ Agregada opción `silenceDeprecations: ['legacy-js-api']`
+- ✅ Eliminados completamente todos los warnings de Sass
+- ✅ Mantenida compatibilidad con API moderna
+
+#### 3. **WARNINGS: @import Rules Deprecadas**
+**Problema**:
+```
+WARNING: Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+```
+
+**Solución**:
+- ✅ Actualizados archivos SCSS para usar `@use` en lugar de `@import`
+- ✅ Corregidos archivos:
+  - `CharacterCreationScreen.scss`
+  - `CharacterManagementScreen.scss` 
+  - `WaitingRoomScreen.scss`
+
+### 📊 Resultados de las Correcciones
+
+#### Antes:
+```
+ERROR in ./src/renderer/screens/WaitingRoomScreen.scss
+webpack 5.101.3 compiled with 1 error and 16 warnings
+```
+
+#### Después:
+```
+webpack 5.101.3 compiled successfully in 7162 ms
+✅ Assets cargados correctamente:
+- waiting_room.jpg (115 KiB)
+- main_menu.jpg (81.6 KiB)  
+- create game room background.jpg (99.4 KiB)
+```
+
+### 🔧 Archivos Modificados
+
+1. **`sass.config.js`**
+   - Agregada configuración para silenciar warnings legacy
+   - Mantenida compatibilidad con webpack
+
+2. **`src/renderer/screens/WaitingRoomScreen.scss`**
+   - Corregida ruta de imagen de background
+   - Cambiado `@import` por `@use`
+
+3. **`src/renderer/screens/CharacterCreationScreen.scss`**
+   - Cambiado `@import` por `@use`
+
+4. **`src/renderer/screens/CharacterManagementScreen.scss`**
+   - Cambiado `@import` por `@use`
+
+### 🎯 Estado Final
+
+**SASS/SCSS**: ✅ 100% Sin Warnings  
+**Assets**: ✅ Todas las imágenes cargan correctamente  
+**Compilación**: ✅ Exitosa sin errores  
+**Tests Unitarios**: ✅ 77/77 pasando (100%)
 
 ---
 

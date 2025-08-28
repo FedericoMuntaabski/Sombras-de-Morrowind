@@ -1,10 +1,10 @@
 const path = require('path');
-const sass = require('sass');
 
 module.exports = {
-  implementation: sass,
+  implementation: require('sass'),
   sassOptions: {
-    api: 'modern',
+    // Usar API legacy de forma silenciosa hasta migrar completamente
+    silenceDeprecations: ['legacy-js-api'],
     importers: [
       {
         findFileUrl(url) {

@@ -1,10 +1,14 @@
 import express from 'express';
 import * as http from 'http';
 import * as path from 'path';
+import { config } from 'dotenv';
+
+// Cargar variables de entorno
+config();
 
 // Configuración básica
-const config = {
-  port: parseInt(process.env.PORT || '8080'),
+const serverConfig = {
+  port: parseInt(process.env.PORT || '3000'),
   host: process.env.HOST || 'localhost'
 };
 
@@ -89,10 +93,10 @@ app.get('*', (_req, res) => {
 const server = http.createServer(app);
 
 // Iniciar servidor
-server.listen(config.port, config.host, () => {
+server.listen(serverConfig.port, serverConfig.host, () => {
   console.log(`[Server] 🚀 Servidor iniciado exitosamente`);
-  console.log(`[Server] 📍 URL: http://${config.host}:${config.port}`);
-  console.log(`[Server] 🎮 API Health: http://${config.host}:${config.port}/api/health`);
+  console.log(`[Server] 📍 URL: http://${serverConfig.host}:${serverConfig.port}`);
+  console.log(`[Server] 🎮 API Health: http://${serverConfig.host}:${serverConfig.port}/api/health`);
   console.log(`[Server] 🏰 Sombras de Morrowind está listo para jugar!`);
 });
 

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useCharacterStore } from '@renderer/store/characterStore';
 import { useAppStore } from '@renderer/store/appStore';
 import { Character } from '@shared/types/character';
-import { getRaceInfo, getDefaultFactionForRace } from '@shared/data/characterData';
+import { getRaceInfo, getDefaultFactionForRace } from '../../shared/data/characterData';
 import { logger } from '@shared/utils/logger';
 import MedievalButton from '@renderer/components/ui/MedievalButton';
 import './CharacterManagementScreen.scss';

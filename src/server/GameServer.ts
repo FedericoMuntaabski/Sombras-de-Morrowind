@@ -14,6 +14,9 @@ import {
   GameMode,
   GameDifficulty 
 } from '../shared/types/server';
+import { CharacterPersistenceService } from '../shared/services/CharacterPersistence';
+import { PresetValidationService } from '../shared/services/PresetValidation';
+import { ErrorHandlerService, ErrorType } from '../shared/services/ErrorHandler';
 
 export class GameServer {
   private server: http.Server;
@@ -22,9 +25,21 @@ export class GameServer {
   private rooms: Map<string, GameRoom> = new Map();
   private players: Map<string, Player> = new Map();
   private config: ServerConfig;
+  private characterPersistence: CharacterPersistenceService;
+  private presetValidation: PresetValidationService;
+  private errorHandler: ErrorHandlerService;
 
   constructor(config: ServerConfig) {
     this.config = config;
+    this.characterPersistence = CharacterPersistenceService.getInstance();
+    this.presetValidation = PresetValidationService.getInstance();
+    this.errorHandler = ErrorHandlerService.getInstance({
+      logErrors: true,
+      sendToClient: true,
+      includeStackTrace: false,
+      rateLimitEnabled: true,
+      maxErrorsPerMinute: 15
+    });
     this.app = express();
     this.setupExpress();
     this.server = http.createServer(this.app);
@@ -107,6 +122,142 @@ export class GameServer {
       });
     });
 
+    // Rutas para manejo de personajes
+    this.app.post('/api/characters/save', (req, res) => {
+      try {
+        const { character, playerId, roomId } = req.body;
+        
+        // Validar el personaje antes de guardarlo usando el servicio de validación de presets
+        const validation = this.presetValidation.validateCharacter(character);
+        if (!validation.isValid) {
+          res.status(400).json({ 
+            error: 'Character validation failed', 
+            details: validation.errors 
+          });
+          return;
+        }
+
+        const characterId = this.characterPersistence.saveCharacter(character, playerId, roomId);
+        res.json({ 
+          characterId, 
+          warnings: validation.warnings,
+          recommendations: validation.recommendations
+        });
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to save character' });
+      }
+    });
+
+    this.app.get('/api/characters/player/:playerId', (req, res) => {
+      try {
+        const characters = this.characterPersistence.loadCharactersByPlayer(req.params.playerId);
+        res.json(characters);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to load characters' });
+      }
+    });
+
+    this.app.get('/api/characters/:characterId', (req, res) => {
+      try {
+        const character = this.characterPersistence.loadCharacter(req.params.characterId);
+        if (!character) {
+          res.status(404).json({ error: 'Character not found' });
+          return;
+        }
+        res.json(character);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to load character' });
+      }
+    });
+
+    this.app.delete('/api/characters/:characterId', (req, res) => {
+      try {
+        const success = this.characterPersistence.deleteCharacter(req.params.characterId);
+        if (!success) {
+          res.status(404).json({ error: 'Character not found' });
+          return;
+        }
+        res.json({ success: true });
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to delete character' });
+      }
+    });
+
+    this.app.post('/api/characters/validate', (req, res) => {
+      try {
+        const { character } = req.body;
+        const validation = this.presetValidation.validateCharacter(character);
+        res.json(validation);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to validate character' });
+      }
+    });
+
+    this.app.get('/api/presets/templates', (_req, res) => {
+      try {
+        const templates = this.presetValidation.getPresetTemplates();
+        res.json(templates);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to get preset templates' });
+      }
+    });
+
+    this.app.get('/api/presets/rules', (_req, res) => {
+      try {
+        const rules = this.presetValidation.getValidationRules();
+        res.json(rules);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to get validation rules' });
+      }
+    });
+
+    this.app.get('/api/presets/constraints', (_req, res) => {
+      try {
+        const constraints = this.presetValidation.getAttributeConstraints();
+        res.json(constraints);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to get attribute constraints' });
+      }
+    });
+
+    this.app.get('/api/characters/stats/summary', (_req, res) => {
+      try {
+        const stats = this.characterPersistence.getCharacterStats();
+        res.json(stats);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to get character stats' });
+      }
+    });
+
+    this.app.post('/api/characters/export/:characterId', (req, res) => {
+      try {
+        const exportData = this.characterPersistence.exportCharacter(req.params.characterId);
+        if (!exportData) {
+          res.status(404).json({ error: 'Character not found' });
+          return;
+        }
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="character_${req.params.characterId}.json"`);
+        res.send(exportData);
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to export character' });
+      }
+    });
+
+    this.app.post('/api/characters/import', (req, res) => {
+      try {
+        const { characterData, playerId } = req.body;
+        const characterId = this.characterPersistence.importCharacter(characterData, playerId);
+        if (!characterId) {
+          res.status(400).json({ error: 'Invalid character data' });
+          return;
+        }
+        res.json({ characterId });
+      } catch (error) {
+        res.status(500).json({ error: 'Failed to import character' });
+      }
+    });
+
     // Servir la aplicación
     this.app.get('*', (_req, res) => {
       res.sendFile(path.join(__dirname, '../../dist/index.html'));
@@ -126,7 +277,7 @@ export class GameServer {
           this.handleGameEvent(ws, event, playerId, roomId);
         } catch (error) {
           console.error('[Server] Error parsing message:', error);
-          this.sendError(ws, 'Invalid message format');
+          this.sendError(ws, 'Invalid message format', ErrorType.INVALID_DATA_FORMAT);
         }
       });
 
@@ -192,6 +343,34 @@ export class GameServer {
         }
         break;
 
+      case GameEventType.PRESET_SELECT:
+        if (playerId && roomId) {
+          this.handlePresetSelect(playerId, roomId, event.data);
+        }
+        break;
+
+      case GameEventType.CHARACTER_SAVE:
+        if (playerId) {
+          this.handleCharacterSave(ws, playerId, event.data);
+        }
+        break;
+
+      case GameEventType.CHARACTER_LOAD:
+        if (playerId) {
+          this.handleCharacterLoad(ws, playerId, event.data);
+        }
+        break;
+
+      case GameEventType.CHARACTER_VALIDATE:
+        this.handleCharacterValidate(ws, event.data);
+        break;
+
+      case 'start_game':
+        if (playerId && roomId) {
+          this.handleStartGame(playerId, roomId);
+        }
+        break;
+
       case 'leave_room':
         if (playerId && roomId) {
           this.handleLeaveRoom(playerId, roomId);
@@ -231,17 +410,17 @@ export class GameServer {
     const room = this.rooms.get(roomId);
     
     if (!room) {
-      this.sendError(ws, 'Room not found');
+      this.sendError(ws, 'Room not found', ErrorType.ROOM_NOT_FOUND, { roomId: data.roomId });
       return { success: false };
     }
 
     if (room.players.length >= room.maxPlayers) {
-      this.sendError(ws, 'Room is full');
+      this.sendError(ws, 'Room is full', ErrorType.ROOM_FULL, { roomId: data.roomId });
       return { success: false };
     }
 
     if (room.status !== RoomStatus.WAITING) {
-      this.sendError(ws, 'Game already started');
+      this.sendError(ws, 'Game already started', ErrorType.GAME_ALREADY_STARTED, { roomId: data.roomId });
       return { success: false };
     }
 
@@ -286,6 +465,9 @@ export class GameServer {
       }
     }, playerId);
 
+    // Enviar notificación de chat
+    this.sendChatNotification(roomId, `${playerName} se ha unido a la sala`, 'join');
+
     console.log(`[Server] Jugador ${playerName} se unió a la sala ${room.name}`);
     return { success: true, playerId, roomId };
   }
@@ -326,10 +508,17 @@ export class GameServer {
       }
     });
 
+    // Enviar actualización del lobby
+    this.sendLobbyUpdate(roomId);
+
     // Verificar si todos están listos para empezar
     const allReady = room.players.every((p: Player) => p.isReady);
     if (allReady && room.players.length >= 2) {
-      this.startGame(roomId);
+      this.broadcastToRoom(roomId, {
+        type: GameEventType.LOBBY_READY,
+        timestamp: Date.now(),
+        data: { canStartGame: true }
+      });
     }
   }
 
@@ -401,6 +590,177 @@ export class GameServer {
     });
   }
 
+  private handlePresetSelect(playerId: string, roomId: string, presetData: any): void {
+    const player = this.players.get(playerId);
+    const room = this.rooms.get(roomId);
+    
+    if (!player || !room) return;
+
+    // Actualizar preset del jugador (en una implementación real, 
+    // esto se almacenaría en la estructura del jugador)
+    room.lastActivity = Date.now();
+
+    // Notificar a todos los jugadores en la sala
+    this.broadcastToRoom(roomId, {
+      type: GameEventType.PRESET_SELECTED,
+      timestamp: Date.now(),
+      data: {
+        playerId,
+        playerName: player.name,
+        preset: presetData.preset
+      }
+    });
+
+    // Enviar actualización del lobby
+    this.sendLobbyUpdate(roomId);
+  }
+
+  private handleCharacterSave(ws: WebSocket, playerId: string, data: any): void {
+    try {
+      const { character, roomId } = data;
+      
+      // Validar el personaje antes de guardarlo usando el servicio de validación de presets
+      const validation = this.presetValidation.validateCharacter(character);
+      if (!validation.isValid) {
+        this.sendEvent(ws, {
+          type: GameEventType.ERROR,
+          timestamp: Date.now(),
+          data: {
+            message: 'Character validation failed',
+            errors: validation.errors
+          }
+        });
+        return;
+      }
+
+      const characterId = this.characterPersistence.saveCharacter(character, playerId, roomId);
+      
+      this.sendEvent(ws, {
+        type: GameEventType.CHARACTER_SAVED,
+        timestamp: Date.now(),
+        data: {
+          characterId,
+          warnings: validation.warnings,
+          recommendations: validation.recommendations,
+          character
+        }
+      });
+    } catch (error) {
+      this.sendError(ws, 'Failed to save character', ErrorType.CHARACTER_SAVE_FAILED, { playerId });
+    }
+  }
+
+  private handleCharacterLoad(ws: WebSocket, playerId: string, data: any): void {
+    try {
+      const { characterId, loadByName } = data;
+      
+      let character = null;
+      
+      if (characterId) {
+        character = this.characterPersistence.loadCharacter(characterId);
+      } else if (loadByName) {
+        character = this.characterPersistence.findCharacterByPlayerAndName(playerId, loadByName);
+      } else {
+        // Cargar todos los personajes del jugador
+        const characters = this.characterPersistence.loadCharactersByPlayer(playerId);
+        this.sendEvent(ws, {
+          type: GameEventType.CHARACTER_LOADED,
+          timestamp: Date.now(),
+          data: {
+            characters,
+            type: 'list'
+          }
+        });
+        return;
+      }
+
+      if (!character) {
+        this.sendError(ws, 'Character not found', ErrorType.CHARACTER_NOT_FOUND, { playerId, characterId, loadByName });
+        return;
+      }
+
+      this.sendEvent(ws, {
+        type: GameEventType.CHARACTER_LOADED,
+        timestamp: Date.now(),
+        data: {
+          character,
+          type: 'single'
+        }
+      });
+    } catch (error) {
+      this.sendError(ws, 'Failed to load character', ErrorType.CHARACTER_LOAD_FAILED, { playerId });
+    }
+  }
+
+  private handleCharacterValidate(ws: WebSocket, data: any): void {
+    try {
+      const { character } = data;
+      const validation = this.presetValidation.validateCharacter(character);
+      
+      this.sendEvent(ws, {
+        type: GameEventType.CHARACTER_VALIDATED,
+        timestamp: Date.now(),
+        data: validation
+      });
+    } catch (error) {
+      this.sendError(ws, 'Failed to validate character', ErrorType.CHARACTER_VALIDATION_FAILED);
+    }
+  }
+
+  private handleStartGame(playerId: string, roomId: string): void {
+    const player = this.players.get(playerId);
+    const room = this.rooms.get(roomId);
+    
+    if (!player || !room || !player.isHost) {
+      this.sendError(player?.ws || null as any, 'Only host can start the game', ErrorType.PLAYER_NOT_HOST, { playerId, roomId });
+      return;
+    }
+
+    // Verificar que todos los jugadores estén listos y tengan preset
+    const allReady = room.players.every((p: Player) => p.isReady);
+    if (!allReady) {
+      this.sendError(player.ws, 'Not all players are ready', ErrorType.PLAYER_NOT_READY, { roomId });
+      return;
+    }
+
+    // Iniciar el juego
+    this.startGame(roomId);
+  }
+
+  private sendLobbyUpdate(roomId: string): void {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+
+    const lobbyState = {
+      players: room.players.map((p: Player) => ({
+        id: p.id,
+        name: p.name,
+        isHost: p.isHost || false,
+        isReady: p.isReady,
+        joinedAt: p.joinedAt
+      })),
+      allPlayersReady: room.players.every((p: Player) => p.isReady),
+      canStartGame: room.players.length >= 2 && room.players.every((p: Player) => p.isReady)
+    };
+
+    this.broadcastToRoom(roomId, {
+      type: GameEventType.LOBBY_UPDATE,
+      timestamp: Date.now(),
+      data: lobbyState
+    });
+  }
+
+  private sendChatNotification(roomId: string, message: string, type: 'join' | 'leave' | 'system' = 'system'): void {
+    this.broadcastToRoom(roomId, {
+      type: GameEventType.CHAT_NOTIFICATION,
+      timestamp: Date.now(),
+      data: {
+        message,
+        type
+      }
+    });
+  }
+
   private handleLeaveRoom(playerId: string, roomId: string): void {
     const player = this.players.get(playerId);
     const room = this.rooms.get(roomId);
@@ -425,6 +785,9 @@ export class GameServer {
           playerName: player.name
         }
       });
+
+      // Enviar notificación de chat
+      this.sendChatNotification(roomId, `${player.name} ha abandonado la sala`, 'leave');
 
       // Si el host se va, transferir a otro jugador
       if (player.isHost && room.players.length > 0) {
@@ -469,12 +832,9 @@ export class GameServer {
     }
   }
 
-  private sendError(ws: WebSocket, message: string): void {
-    this.sendEvent(ws, {
-      type: GameEventType.ERROR,
-      timestamp: Date.now(),
-      data: { message }
-    });
+  private sendError(ws: WebSocket, message: string, errorType: ErrorType = ErrorType.SERVER_ERROR, context?: any): void {
+    const error = this.errorHandler.createError(errorType, message, context);
+    this.errorHandler.handleError(error, ws, context);
   }
 
   public start(): Promise<void> {
@@ -482,14 +842,36 @@ export class GameServer {
       this.server.listen(this.config.port, this.config.host, () => {
         console.log(`[Server] Servidor iniciado en http://${this.config.host}:${this.config.port}`);
         console.log(`[Server] WebSocket disponible en ws://${this.config.host}:${this.config.port}/ws`);
+        
+        // Configurar limpieza periódica de salas inactivas
+        setInterval(() => {
+          this.cleanupInactiveRooms();
+        }, 5 * 60 * 1000); // Cada 5 minutos
+        
         resolve();
       });
     });
   }
 
   public stop(): void {
+    console.log('[Server] Cerrando servidor...');
+    
+    // Limpiar recursos de persistencia
+    this.characterPersistence.cleanup();
+    
+    // Cerrar todas las conexiones WebSocket
+    this.wss.clients.forEach((ws) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    });
+
+    // Cerrar el servidor WebSocket
     this.wss.close();
+    
+    // Cerrar el servidor HTTP
     this.server.close();
+    
     console.log('[Server] Servidor detenido');
   }
 

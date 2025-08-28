@@ -9,7 +9,7 @@ import {
   STARTING_POINTS_TO_DISTRIBUTE,
   getAvailablePoints
 } from '@shared/types/character';
-import { getRaceInfo, getDefaultFactionForRace } from '@shared/data/characterData';
+import { getRaceInfo, getDefaultFactionForRace } from '../../shared/data/characterData';
 import { logger } from '@shared/utils/logger';
 
 interface CharacterState {

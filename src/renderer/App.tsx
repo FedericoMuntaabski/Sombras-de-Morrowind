@@ -12,6 +12,7 @@ import GameScreen from '@renderer/screens/GameScreen';
 import AboutScreen from '@renderer/screens/AboutScreen';
 import CreateRoomScreen from '@renderer/screens/CreateRoomScreen';
 import JoinRoomScreen from '@renderer/screens/JoinRoomScreen';
+import WaitingRoomScreen from '@renderer/screens/WaitingRoomScreen';
 import CharacterCreationScreen from '@renderer/screens/CharacterCreationScreen';
 import CharacterManagementScreen from '@renderer/screens/CharacterManagementScreen';
 
@@ -96,6 +97,8 @@ const App: React.FC = () => {
         return <CreateRoomScreen />;
       case 'joinRoom':
         return <JoinRoomScreen />;
+      case 'waiting':
+        return <WaitingRoomScreen />;
       case 'characterCreation':
         return <CharacterCreationScreen />;
       case 'characterManagement':

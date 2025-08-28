@@ -8,7 +8,8 @@ const colors = {
   green: '\x1b[32m',
   yellow: '\x1b[33m',
   blue: '\x1b[34m',
-  red: '\x1b[31m'
+  red: '\x1b[31m',
+  cyan: '\x1b[36m'
 };
 
 function log(message, color = colors.reset) {
@@ -28,8 +29,9 @@ process.on('SIGTERM', cleanup);
 async function startDevelopment() {
   log('🚀 Iniciando Sombras de Morrowind - Desarrollo Completo', colors.bright + colors.blue);
   log('📋 Este script iniciará:', colors.green);
-  log('   1. Servidor Node.js (puerto 8080)', colors.green);
-  log('   2. Aplicación Electron', colors.green);
+  log('   1. Servidor WebSocket (puerto 3000)', colors.green);
+  log('   2. Webpack Dev Server (puerto 8080)', colors.green);
+  log('   3. Aplicación Electron', colors.green);
   log('', colors.reset);
 
   try {
@@ -52,8 +54,8 @@ async function startDevelopment() {
       });
     });
 
-    // 2. Iniciar servidor Node.js
-    log('🌐 Iniciando servidor Node.js...', colors.yellow);
+    // 2. Iniciar servidor WebSocket
+    log('🌐 Iniciando servidor WebSocket...', colors.yellow);
     const serverProcess = spawn('npm', ['run', 'host'], {
       stdio: ['ignore', 'pipe', 'pipe'],
       shell: true,
@@ -74,11 +76,33 @@ async function startDevelopment() {
       }
     });
 
-    // 3. Esperar un poco para que el servidor se inicie
-    log('⏳ Esperando que el servidor se inicie...', colors.yellow);
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // 3. Iniciar Webpack Dev Server
+    log('📦 Iniciando Webpack Dev Server...', colors.yellow);
+    const webpackProcess = spawn('npm', ['run', 'dev:renderer'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      shell: true,
+      cwd: process.cwd()
+    });
 
-    // 4. Iniciar Electron
+    webpackProcess.stdout.on('data', (data) => {
+      const message = data.toString().trim();
+      if (message) {
+        log(`[WEBPACK] ${message}`, colors.cyan);
+      }
+    });
+
+    webpackProcess.stderr.on('data', (data) => {
+      const message = data.toString().trim();
+      if (message) {
+        log(`[WEBPACK ERROR] ${message}`, colors.red);
+      }
+    });
+
+    // 4. Esperar para que los servidores se inicien
+    log('⏳ Esperando que los servidores se inicien...', colors.yellow);
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    // 5. Iniciar Electron
     log('🖥️  Iniciando aplicación Electron...', colors.yellow);
     const electronProcess = spawn('npm', ['run', 'start'], {
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -101,20 +125,30 @@ async function startDevelopment() {
     });
 
     log('✅ Desarrollo iniciado exitosamente!', colors.bright + colors.green);
-    log('🌐 Servidor: http://localhost:8080', colors.green);
-    log('🖥️  Electron: Ventana principal abierta', colors.green);
+    log('🌐 Servidor WebSocket: http://localhost:3000', colors.green);
+    log('� Webpack Dev Server: http://localhost:8080', colors.green);
+    log('�🖥️  Electron: Ventana principal abierta', colors.green);
     log('', colors.reset);
     log('💡 Presiona Ctrl+C para cerrar todo', colors.yellow);
 
     // Manejar cierre de procesos
     electronProcess.on('close', (code) => {
       log(`\n🖥️  Electron cerrado (código: ${code})`, colors.yellow);
+      webpackProcess.kill();
       serverProcess.kill();
       process.exit(0);
     });
 
     serverProcess.on('close', (code) => {
       log(`\n🌐 Servidor cerrado (código: ${code})`, colors.yellow);
+      webpackProcess.kill();
+      electronProcess.kill();
+      process.exit(0);
+    });
+
+    webpackProcess.on('close', (code) => {
+      log(`\n📦 Webpack cerrado (código: ${code})`, colors.yellow);
+      serverProcess.kill();
       electronProcess.kill();
       process.exit(0);
     });

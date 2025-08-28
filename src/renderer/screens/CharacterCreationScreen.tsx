@@ -8,7 +8,7 @@ import {
   canIncreaseAttribute,
   canDecreaseAttribute
 } from '@shared/types/character';
-import { getRaceInfo, getDefaultFactionForRace, getAllRaces } from '@shared/data/characterData';
+import { getRaceInfo, getDefaultFactionForRace, getAllRaces } from '../../shared/data/characterData';
 import { logger } from '@shared/utils/logger';
 import MedievalButton from '@renderer/components/ui/MedievalButton';
 import './CharacterCreationScreen.scss';

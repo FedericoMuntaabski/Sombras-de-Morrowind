@@ -3,41 +3,47 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
 # Build outputs
 dist/
 build/
 out/
 app/
+release/
 
 # TypeScript
 *.tsbuildinfo
 *.d.ts.map
 
-# Electron
+# Electron packaged apps
 *.app
 *.dmg
 *.exe
 *.deb
 *.rpm
 *.AppImage
-release/
+*.msi
+*.snap
 
-# Development
+# Environment variables
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# IDE/Editor
-.vscode/
+# IDE/Editor files
+.vscode/settings.json
+.vscode/launch.json
 .idea/
 *.swp
 *.swo
 *~
+.project
+.classpath
 
-# OS
+# OS generated files
 .DS_Store
 .DS_Store?
 ._*
@@ -46,10 +52,15 @@ release/
 ehthumbs.db
 Thumbs.db
 Desktop.ini
+$RECYCLE.BIN/
 
 # Logs
 logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
 
 # Runtime data
 pids/
@@ -60,13 +71,27 @@ pids/
 # Coverage directory used by tools like istanbul
 coverage/
 *.lcov
-
-# nyc test coverage
 .nyc_output
+
+# Testing
+test-results/
+playwright-report/
+junit.xml
 
 # Temporary folders
 .tmp/
 .temp/
+tmp/
+temp/
+
+# Cache directories
+.npm
+.eslintcache
+.cache
+.parcel-cache
+.webpack/
+.next/
+.nuxt/
 
 # Optional npm cache directory
 .npm
@@ -80,24 +105,15 @@ coverage/
 # Yarn Integrity file
 .yarn-integrity
 
-# parcel-bundler cache (https://parceljs.org/)
-.cache
-.parcel-cache
-
-# webpack cache
-.webpack/
-
-# Phaser.js specific
-*.cache
-
-# Game data (save files, user preferences)
+# Game-specific data
 saves/
 userdata/
 screenshots/
-rooms/
-temp/
+data/characters.json
+data/presets.json
+room-cache/
 
-# Asset source files (if using external tools)
+# Asset source files (development only)
 *.psd
 *.ai
 *.sketch
@@ -112,39 +128,21 @@ assets/audio/source/
 
 # Local configuration
 config/local.json
-.env.local
-.env.development.local
-.env.production.local
-
-# Testing
-test-results/
-playwright-report/
-coverage/
 
 # Backup files
 *.bak
 *.backup
 *.orig
 
-# macOS specific
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Windows specific
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
 # Audio editing temporary files
-*.tmp
-*.temp
 *.pkf
 *.reapeaks
 
-# Image editing cache
-*.cache
-*.tmp
+# Documentation builds
+docs/build/
+docs/.vuepress/dist/
 
-# Room data cache
-room-cache/
+# Package manager lock files (choose one)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml

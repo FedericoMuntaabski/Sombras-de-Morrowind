@@ -11,12 +11,13 @@ module.exports = {
     filename: 'renderer.js',
     publicPath: process.env.NODE_ENV === 'production' ? './' : '/',
   },
+  // NO marcar nada como external para permitir que webpack maneje todo internamente
   module: {
     rules: [
       {
         test: /\.(ts|tsx)$/,
         use: 'ts-loader',
-        exclude: /node_modules/,
+        exclude: [/node_modules/, /\.test\.ts$/, /src\/test\//],
       },
       {
         test: /\.css$/,
@@ -57,7 +58,14 @@ module.exports = {
       "crypto": require.resolve("crypto-browserify"),
       "stream": require.resolve("stream-browserify"),
       "util": require.resolve("util"),
+      "http": require.resolve("stream-http"),
+      "https": require.resolve("https-browserify"),
+      "os": require.resolve("os-browserify"),
+      "url": require.resolve("url"),
+      "assert": require.resolve("assert"),
       "path": require.resolve("path-browserify"),
+      "events": require.resolve("events"),
+      "querystring": require.resolve("querystring-es3"),
       "fs": false,
       "net": false,
       "tls": false
@@ -69,8 +77,8 @@ module.exports = {
       filename: 'index.html',
     }),
     new webpack.DefinePlugin({
-      'global': 'globalThis',
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+      'process.env': JSON.stringify(process.env),
     }),
     new webpack.ProvidePlugin({
       Buffer: ['buffer', 'Buffer'],
@@ -89,7 +97,12 @@ module.exports = {
       }
     ],
     compress: true,
-    port: 3000,
+    port: 8080,
     hot: true,
+    allowedHosts: 'all',
+    headers: {
+      'Cross-Origin-Embedder-Policy': 'unsafe-none',
+      'Cross-Origin-Opener-Policy': 'unsafe-none'
+    }
   },
 };

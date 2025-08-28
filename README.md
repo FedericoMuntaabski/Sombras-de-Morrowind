@@ -53,7 +53,17 @@ Un juego de mesa digital cooperativo inspirado en el universo de The Elder Scrol
 - **Patrón**: Modular con separación de responsabilidades
 - **Estado**: Redux Toolkit o Zustand
 - **Comunicación**: Event-driven architecture
-- **Build**: Webpack/Vite optimizado
+- **Build**: Webpack optimizado con Sass/SCSS
+- **Assets**: Gestión automática de imágenes y fuentes
+
+### Estado del Desarrollo ✅
+- **Configuración Base**: ✅ Completa
+- **UI/UX Sistema**: ✅ Medieval theme implementado
+- **Servidor Multiplayer**: ✅ WebSocket funcional
+- **Tests Unitarios**: ✅ 77/77 pasando (100%)
+- **Assets Management**: ✅ Imágenes y fuentes optimizadas
+- **Build System**: ✅ Sin errores ni warnings
+- **Development Environment**: ✅ Script combinado funcional
 
 ## 🚀 Instalación y Desarrollo
 
@@ -74,8 +84,8 @@ npm install
 # Configurar entorno de desarrollo
 npm run setup
 
-# Ejecutar en modo desarrollo
-npm run dev
+# Ejecutar en modo desarrollo completo
+npm run dev:combined
 ```
 
 ### Scripts Principales

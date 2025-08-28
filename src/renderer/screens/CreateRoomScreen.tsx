@@ -53,8 +53,8 @@ const CreateRoomScreen: React.FC = () => {
       const roomId = await createRoom(roomData);
       logger.info(`Room created with ID: ${roomId}`, 'CreateRoomScreen');
       
-      // Navegar a la sala creada (por ahora vamos al menú principal)
-      setCurrentScreen('menu');
+      // Navegar a la sala de espera
+      setCurrentScreen('waiting');
     } catch (error) {
       logger.error(`Failed to create room: ${error}`, 'CreateRoomScreen');
       setError('Error al crear la sala. Inténtalo de nuevo.');

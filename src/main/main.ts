@@ -56,13 +56,15 @@ class Application {
       show: false,
       icon: path.join(__dirname, '../assets/icon.png'),
       webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        allowRunningInsecureContent: false,
+        nodeIntegration: isDev, // Habilitar solo en desarrollo para webpack-dev-server
+        contextIsolation: !isDev, // Deshabilitar en desarrollo para permitir require
+        allowRunningInsecureContent: isDev,
         experimentalFeatures: false,
         preload: path.join(__dirname, 'preload.js'),
-        webSecurity: true,
-        sandbox: false // Necesario para preload script
+        webSecurity: !isDev, // Desactivar en desarrollo para webpack-dev-server
+        sandbox: false, // Necesario para preload script
+        nodeIntegrationInWorker: false,
+        nodeIntegrationInSubFrames: false
       },
     });
 

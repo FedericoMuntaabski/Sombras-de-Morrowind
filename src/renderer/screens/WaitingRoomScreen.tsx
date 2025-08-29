@@ -97,6 +97,11 @@ const WaitingRoomScreen: React.FC = () => {
     setCurrentScreen('game');
   }, [allPlayersReady, setCurrentScreen]);
 
+  const handleOpenSettings = useCallback(() => {
+    logger.info('Opening settings from waiting room', 'WaitingRoomScreen');
+    setCurrentScreen('settings');
+  }, [setCurrentScreen]);
+
   const handleSendMessage = useCallback(() => {
     if (!newMessage.trim()) return;
 
@@ -290,6 +295,13 @@ const WaitingRoomScreen: React.FC = () => {
             <MedievalButton
               text="Salir de la Sala"
               onClick={handleLeaveRoom}
+              variant="secondary"
+              size="medium"
+            />
+
+            <MedievalButton
+              text="Configuración"
+              onClick={handleOpenSettings}
               variant="secondary"
               size="medium"
             />

@@ -16,6 +16,9 @@ const defaultSettings: GameSettings = {
 };
 
 interface AppStore extends AppState {
+  // Navigation history
+  previousScreen: AppScreen | null;
+  
   // Actions
   setCurrentScreen: (screen: AppScreen) => void;
   setLoading: (loading: boolean) => void;
@@ -29,13 +32,17 @@ export const useAppStore = create<AppStore>()(
     (set, get) => ({
       // Initial state
       currentScreen: 'loading',
+      previousScreen: null,
       isLoading: true,
       error: null,
       settings: defaultSettings,
 
       // Actions
       setCurrentScreen: (screen: AppScreen) => {
-        set({ currentScreen: screen });
+        set((state) => ({ 
+          previousScreen: state.currentScreen,
+          currentScreen: screen 
+        }));
       },
 
       setLoading: (loading: boolean) => {

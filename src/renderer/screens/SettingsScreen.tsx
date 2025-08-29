@@ -1,16 +1,24 @@
 import React from 'react';
 import { useAppStore } from '@renderer/store/appStore';
+import { useRoomStore } from '@renderer/store/roomStore';
 import { logger } from '@shared/utils/logger';
 import MedievalButton from '@renderer/components/ui/MedievalButton';
 import AudioControls from '@renderer/components/ui/AudioControls';
 import './SettingsScreen.scss';
 
 const SettingsScreen: React.FC = () => {
-  const { setCurrentScreen } = useAppStore();
+  const { setCurrentScreen, previousScreen } = useAppStore();
+  const { currentRoom } = useRoomStore();
 
   const handleBack = (): void => {
-    logger.info('Returning to main menu from settings', 'Settings');
-    setCurrentScreen('menu');
+    // Si hay una sala activa y la pantalla anterior era waiting, volver a la sala
+    if (currentRoom && previousScreen === 'waiting') {
+      logger.info('Returning to waiting room from settings', 'Settings');
+      setCurrentScreen('waiting');
+    } else {
+      logger.info('Returning to main menu from settings', 'Settings');
+      setCurrentScreen('menu');
+    }
   };
 
   return (

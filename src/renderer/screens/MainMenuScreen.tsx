@@ -43,6 +43,11 @@ const MainMenuScreen: React.FC = () => {
     setCurrentScreen('settings');
   };
 
+  const handleAbout = (): void => {
+    logger.info('Opening about screen', 'MainMenu');
+    setCurrentScreen('about');
+  };
+
   return (
     <div className="main-menu">
       <div className="menu-background"></div>
@@ -85,6 +90,13 @@ const MainMenuScreen: React.FC = () => {
           <MedievalButton
             text="Opciones"
             onClick={handleSettings}
+            variant="secondary"
+            size="medium"
+          />
+
+          <MedievalButton
+            text="Acerca de"
+            onClick={handleAbout}
             variant="secondary"
             size="medium"
           />

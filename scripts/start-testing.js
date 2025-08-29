@@ -20,6 +20,56 @@ function log(message, color = colors.reset) {
   console.log(`${color}${message}${colors.reset}`);
 }
 
+// Función para matar procesos en puerto específico (Windows)
+async function killPortProcess(port) {
+  return new Promise((resolve) => {
+    if (os.platform() === 'win32') {
+      const netstat = spawn('netstat', ['-ano'], { shell: true });
+      let output = '';
+      
+      netstat.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+      
+      netstat.on('close', () => {
+        const lines = output.split('\n');
+        const portLine = lines.find(line => line.includes(`:${port} `) && line.includes('LISTENING'));
+        
+        if (portLine) {
+          const pid = portLine.trim().split(/\s+/).pop();
+          if (pid && pid !== '0') {
+            log(`🔪 Terminando proceso en puerto ${port} (PID: ${pid})`, colors.yellow);
+            spawn('taskkill', ['/F', '/PID', pid], { shell: true });
+            setTimeout(resolve, 1000);
+          } else {
+            resolve();
+          }
+        } else {
+          resolve();
+        }
+      });
+    } else {
+      // Para Linux/Mac
+      const lsof = spawn('lsof', ['-ti', `:${port}`], { shell: true });
+      let pid = '';
+      
+      lsof.stdout.on('data', (data) => {
+        pid += data.toString().trim();
+      });
+      
+      lsof.on('close', () => {
+        if (pid) {
+          log(`🔪 Terminando proceso en puerto ${port} (PID: ${pid})`, colors.yellow);
+          spawn('kill', ['-9', pid], { shell: true });
+          setTimeout(resolve, 1000);
+        } else {
+          resolve();
+        }
+      });
+    }
+  });
+}
+
 async function startTestingEnvironment() {
   log('🧪 Iniciando Entorno de Testing de Salas Multijugador', colors.bright + colors.cyan);
   log('====================================================', colors.cyan);
@@ -33,6 +83,12 @@ async function startTestingEnvironment() {
   const processes = [];
 
   try {
+    // 0. Verificar y liberar puertos si están ocupados
+    log('🔍 Verificando disponibilidad de puertos...', colors.yellow);
+    await killPortProcess(3000);
+    await killPortProcess(8080);
+    log('✅ Puertos liberados', colors.green);
+
     // 1. Compilar la aplicación principal
     log('🔨 Compilando aplicación principal...', colors.yellow);
     const buildMain = spawn('npm', ['run', 'build:main'], {

@@ -103,6 +103,81 @@ $success-green: #5c8a3a;
       margin: 0;
       font-size: 0.9rem;
       text-align: center;
+      white-space: pre-line;
+    }
+
+    .error-actions {
+      margin-top: 0.75rem;
+      text-align: center;
+    }
+  }
+
+  .diagnostics-panel {
+    background: rgba($stone-medium, 0.95);
+    border: 1px solid rgba($primary-gold, 0.3);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+    
+    h3 {
+      color: $primary-gold;
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin: 0 0 1rem 0;
+      text-align: center;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+    }
+
+    .diagnostic-checklist {
+      h4 {
+        color: $text-light;
+        font-size: 1rem;
+        font-weight: 500;
+        margin: 1rem 0 0.5rem 0;
+        
+        &:first-child {
+          margin-top: 0;
+        }
+      }
+
+      ul {
+        list-style: none;
+        margin: 0 0 1rem 0;
+        padding: 0;
+
+        li {
+          color: $text-medium;
+          font-size: 0.9rem;
+          margin: 0.3rem 0;
+          padding-left: 1.2rem;
+          position: relative;
+          line-height: 1.4;
+
+          &::before {
+            content: '•';
+            color: $primary-gold;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+          }
+
+          code {
+            background: rgba($stone-dark, 0.8);
+            color: $primary-gold;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+          }
+        }
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
     }
   }
 

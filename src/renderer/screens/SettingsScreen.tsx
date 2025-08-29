@@ -4,7 +4,6 @@ import { useRoomStore } from '@renderer/store/roomStore';
 import { logger } from '@shared/utils/logger';
 import MedievalButton from '@renderer/components/ui/MedievalButton';
 import AudioControls from '@renderer/components/ui/AudioControls';
-import './SettingsScreen.scss';
 
 const SettingsScreen: React.FC = () => {
   const { setCurrentScreen, previousScreen } = useAppStore();

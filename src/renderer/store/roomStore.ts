@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { MultiplayerService } from '@renderer/services/MultiplayerService';
+import { GameMode, GameDifficulty } from '@shared/types/server';
 import { logger } from '@shared/utils/logger';
 
 export interface Room {
@@ -137,11 +139,32 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
     try {
       logger.info(`Creating room: ${roomData.name}`, 'RoomStore');
       
-      // TODO: Implementar creación real de sala
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const multiplayerService = MultiplayerService.getInstance();
+      
+      // Verificar primero si el servidor está disponible
+      try {
+        const response = await fetch('http://localhost:3000/api/health');
+        if (!response.ok) {
+          throw new Error('Server not responding');
+        }
+      } catch (healthError) {
+        throw new Error('El servidor WebSocket no está ejecutándose. Inicia el servidor con "npm run host" o "npm run dev:combined" antes de crear una sala.');
+      }
+      
+      // Conectar al servidor local
+      await multiplayerService.connect('http://localhost:3000');
+      
+      // Crear sala usando MultiplayerService
+      const roomId = await multiplayerService.createRoom({
+        name: roomData.name,
+        maxPlayers: roomData.maxPlayers,
+        gameMode: GameMode.COOPERATIVE, // Default para testing
+        difficulty: GameDifficulty.MEDIUM, // Default para testing
+        isPrivate: !roomData.isPublic
+      }, get().playerName || 'Host');
       
       const newRoom: Room = {
-        id: Date.now().toString(),
+        id: roomId,
         name: roomData.name,
         host: get().playerName || 'Host',
         maxPlayers: roomData.maxPlayers,

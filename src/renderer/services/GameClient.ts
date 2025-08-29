@@ -36,18 +36,20 @@ export class GameClient {
     this.connectionState.status = ConnectionStatus.CONNECTING;
     this.emit(GameEventType.CONNECTION_STATE_CHANGED, this.connectionState);
 
-    try {
-      const wsUrl = this.config.serverUrl.replace('http', 'ws') + '/ws';
-      this.ws = new WebSocket(wsUrl);
+    return new Promise((resolve, reject) => {
+      try {
+        const wsUrl = this.config.serverUrl.replace('http', 'ws') + '/ws';
+        this.ws = new WebSocket(wsUrl);
 
-      this.ws.onopen = () => {
-        console.log('[Client] Conectado al servidor');
-        this.connectionState.status = ConnectionStatus.CONNECTED;
-        this.connectionState.lastConnected = Date.now();
-        this.connectionState.reconnectAttempts = 0;
-        this.emit(GameEventType.CONNECTION_STATE_CHANGED, this.connectionState);
-        this.startHeartbeat();
-      };
+        this.ws.onopen = () => {
+          console.log('[Client] Conectado al servidor');
+          this.connectionState.status = ConnectionStatus.CONNECTED;
+          this.connectionState.lastConnected = Date.now();
+          this.connectionState.reconnectAttempts = 0;
+          this.emit(GameEventType.CONNECTION_STATE_CHANGED, this.connectionState);
+          this.startHeartbeat();
+          resolve(); // Resolvemos la promesa cuando la conexión está establecida
+        };
 
       this.ws.onmessage = (event) => {
         try {
@@ -63,18 +65,27 @@ export class GameClient {
         this.handleDisconnection();
       };
 
-      this.ws.onerror = (error) => {
-        console.error('[Client] WebSocket error:', error);
+        this.ws.onerror = (error) => {
+          console.error('[Client] WebSocket error:', error);
+          this.connectionState.status = ConnectionStatus.ERROR;
+          this.emit(GameEventType.CONNECTION_STATE_CHANGED, this.connectionState);
+          reject(new Error('WebSocket connection failed'));
+        };
+
+        // Timeout para la conexión
+        setTimeout(() => {
+          if (this.connectionState.status === ConnectionStatus.CONNECTING) {
+            reject(new Error('Connection timeout'));
+          }
+        }, 10000);
+
+      } catch (error) {
+        console.error('[Client] Error al conectar:', error);
         this.connectionState.status = ConnectionStatus.ERROR;
         this.emit(GameEventType.CONNECTION_STATE_CHANGED, this.connectionState);
-      };
-
-    } catch (error) {
-      console.error('[Client] Error al conectar:', error);
-      this.connectionState.status = ConnectionStatus.ERROR;
-      this.emit(GameEventType.CONNECTION_STATE_CHANGED, this.connectionState);
-      throw error;
-    }
+        reject(error);
+      }
+    });
   }
 
   public disconnect(): void {
@@ -121,9 +132,11 @@ export class GameClient {
 
   private handleGameEvent(event: GameEvent): void {
     // Medir latencia si es un pong
-    if (event.type === GameEventType.SERVER_READY) {
+    if (event.type === GameEventType.PONG) {
       const now = Date.now();
-      this.connectionState.latency = now - event.timestamp;
+      if (event.data?.ping) {
+        this.connectionState.latency = now - event.data.ping;
+      }
     }
 
     // Emitir evento a los handlers
@@ -148,6 +161,11 @@ export class GameClient {
 
   // Métodos específicos del juego
   public async createRoom(request: CreateRoomRequest & { playerName: string }): Promise<string> {
+    // Verificar que estamos conectados antes de enviar
+    if (this.connectionState.status !== ConnectionStatus.CONNECTED || !this.ws) {
+      throw new Error('Not connected to server');
+    }
+
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         reject(new Error('Timeout waiting for room creation'));
@@ -155,11 +173,20 @@ export class GameClient {
 
       const handleRoomCreated = (data: any) => {
         clearTimeout(timeoutId);
-        this.off(GameEventType.ROOM_JOINED, handleRoomCreated);
+        this.off(GameEventType.ROOM_CREATED, handleRoomCreated);
+        this.off(GameEventType.ERROR, handleError);
         resolve(data.roomId);
       };
 
-      this.on(GameEventType.ROOM_JOINED, handleRoomCreated);
+      const handleError = (data: any) => {
+        clearTimeout(timeoutId);
+        this.off(GameEventType.ROOM_CREATED, handleRoomCreated);
+        this.off(GameEventType.ERROR, handleError);
+        reject(new Error(data.message || 'Failed to create room'));
+      };
+
+      this.on(GameEventType.ROOM_CREATED, handleRoomCreated);
+      this.on(GameEventType.ERROR, handleError);
       this.sendEvent(GameEventType.CREATE_ROOM, request);
     });
   }
@@ -232,7 +259,7 @@ export class GameClient {
     this.heartbeatInterval = setInterval(() => {
       if (this.connectionState.status === ConnectionStatus.CONNECTED) {
         // Enviar ping para medir latencia
-        this.sendEvent(GameEventType.SERVER_READY, { ping: Date.now() });
+        this.sendEvent(GameEventType.PING, { ping: Date.now() });
       }
     }, this.config.heartbeatInterval);
   }

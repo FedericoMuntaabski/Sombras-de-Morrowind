@@ -379,6 +379,19 @@ export class GameServer {
         }
         break;
 
+      case GameEventType.SERVER_READY:
+        // El cliente está confirmando que recibió el SERVER_READY, no hacer nada
+        break;
+
+      case GameEventType.PING:
+        // Responder al ping con pong para medir latencia
+        this.sendEvent(ws, {
+          type: GameEventType.PONG,
+          timestamp: Date.now(),
+          data: { ping: event.data?.ping || Date.now() }
+        });
+        break;
+
       default:
         console.warn(`[Server] Evento no manejado: ${event.type}`);
     }
@@ -484,6 +497,17 @@ export class GameServer {
       if (room && room.players.length > 0) {
         room.players[0].isHost = true;
       }
+
+      // Enviar evento específico de sala creada
+      this.sendEvent(ws, {
+        type: GameEventType.ROOM_CREATED,
+        timestamp: Date.now(),
+        data: {
+          roomId,
+          roomName,
+          success: true
+        }
+      });
     }
     
     return joinResult;

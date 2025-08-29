@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useAppStore } from '@renderer/store/appStore';
 import { useRoomStore } from '@renderer/store/roomStore';
+import { MultiplayerService } from '@renderer/services/MultiplayerService';
 import { logger } from '@shared/utils/logger';
 import MedievalButton from '@renderer/components/ui/MedievalButton';
 import './JoinRoomScreen.scss';
@@ -16,6 +17,12 @@ const JoinRoomScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [serverIP, setServerIP] = useState('');
   const [serverPort, setServerPort] = useState('3000');
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+
+  // Función para mostrar diagnósticos de red
+  const handleShowDiagnostics = useCallback(() => {
+    setShowDiagnostics(!showDiagnostics);
+  }, [showDiagnostics]);
 
   const handleJoinByIP = useCallback(async () => {
     if (!serverIP.trim()) {
@@ -38,15 +45,70 @@ const JoinRoomScreen: React.FC = () => {
     setError(null);
 
     try {
-      // TODO: Implementar conexión directa por IP
-      // Por ahora simularemos la conexión
-      logger.info(`Connecting to ${serverIP}:${port}`, 'JoinRoomScreen');
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate connection time
+      // Conectar al servidor usando MultiplayerService
+      const multiplayerService = MultiplayerService.getInstance();
+      const serverUrl = `http://${serverIP}:${port}`;
       
-      logger.info(`Connected to server at ${serverIP}:${port}`, 'JoinRoomScreen');
+      logger.info(`Connecting to ${serverUrl}`, 'JoinRoomScreen');
+      await multiplayerService.connect(serverUrl);
+      
+      // Buscar salas disponibles en el servidor
+      logger.info('Connected, searching for available rooms', 'JoinRoomScreen');
+      
+      try {
+        // Intentar obtener la lista de salas disponibles
+        const response = await fetch(`${serverUrl}/api/rooms`);
+        if (response.ok) {
+          const rooms = await response.json();
+          if (rooms && rooms.length > 0) {
+            // Unirse a la primera sala disponible
+            const firstRoom = rooms[0];
+            await multiplayerService.joinRoom(firstRoom.id, playerName);
+            logger.info(`Successfully joined room: ${firstRoom.name}`, 'JoinRoomScreen');
+          } else {
+            logger.warn('No rooms available on server', 'JoinRoomScreen');
+            setError('No hay salas disponibles en el servidor. El host debe crear una sala primero.');
+            return;
+          }
+        } else {
+          logger.warn('Could not fetch rooms list', 'JoinRoomScreen');
+          setError(`No se pudo obtener la lista de salas (HTTP ${response.status}). Verifica que el servidor esté funcionando correctamente.`);
+          return;
+        }
+      } catch (joinError) {
+        logger.error(`Failed to join room: ${joinError}`, 'JoinRoomScreen');
+        let errorMsg = 'No se pudo unir a ninguna sala disponible.';
+        
+        if (joinError instanceof Error) {
+          if (joinError.message.includes('ERR_CONNECTION_REFUSED')) {
+            errorMsg = 'Conexión rechazada. Verifica que el servidor local esté funcionando en localhost:3000.';
+          } else if (joinError.message.includes('timeout')) {
+            errorMsg = 'Tiempo agotado al intentar unirse a la sala.';
+          } else {
+            errorMsg = `Error al unirse a la sala: ${joinError.message}`;
+          }
+        }
+        
+        setError(errorMsg);
+        return;
+      }
+      
+      logger.info(`Successfully connected and joined room at ${serverIP}:${port}`, 'JoinRoomScreen');
       setCurrentScreen('waiting');
     } catch (error) {
-      setError('No se pudo conectar al servidor. Verifica la IP y puerto.');
+      let errorMessage = 'Error desconocido';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('ERR_CONNECTION_REFUSED') || error.message.includes('connection failed')) {
+          errorMessage = `No se puede conectar a ${serverIP}:${port}. Posibles causas:\n\n• El host no ha iniciado el servidor\n• Firewall bloqueando el puerto ${port}\n• IP incorrecta\n• Puerto incorrecto\n\nVerifica que el host tenga el servidor corriendo y el puerto abierto.`;
+        } else if (error.message.includes('timeout')) {
+          errorMessage = `Tiempo agotado conectando a ${serverIP}:${port}. El servidor puede estar sobrecargado o la conexión es muy lenta.`;
+        } else {
+          errorMessage = `Error de conexión: ${error.message}`;
+        }
+      }
+      
+      setError(errorMessage);
       logger.error(`Failed to connect to ${serverIP}:${port}: ${error}`, 'JoinRoomScreen');
     } finally {
       setIsJoining(false);
@@ -76,6 +138,44 @@ const JoinRoomScreen: React.FC = () => {
         {error && (
           <div className="error-message">
             <p>{error}</p>
+            <div className="error-actions">
+              <MedievalButton
+                text={showDiagnostics ? "Ocultar Diagnósticos" : "Ver Diagnósticos"}
+                onClick={handleShowDiagnostics}
+                variant="secondary"
+                size="small"
+              />
+            </div>
+          </div>
+        )}
+
+        {showDiagnostics && (
+          <div className="diagnostics-panel">
+            <h3>Diagnósticos de Conexión</h3>
+            <div className="diagnostic-checklist">
+              <h4>Si no puedes conectarte a una IP externa:</h4>
+              <ul>
+                <li>Verifica que la IP y puerto sean correctos</li>
+                <li>Asegúrate de que el host haya iniciado el servidor</li>
+                <li>El host debe abrir el puerto {serverPort || '3000'} en su firewall</li>
+                <li>El router del host debe redirigir el puerto (port forwarding)</li>
+                <li>Algunos ISP bloquean conexiones entrantes</li>
+              </ul>
+              
+              <h4>Si es conexión local (192.168.x.x):</h4>
+              <ul>
+                <li>Verifica que ambos estén en la misma red WiFi</li>
+                <li>El firewall del host debe permitir conexiones locales</li>
+                <li>Intenta desactivar temporalmente antivirus/firewall para probar</li>
+              </ul>
+
+              <h4>Pruebas que puedes hacer:</h4>
+              <ul>
+                <li>Pide al host que verifique su IP con: <code>ipconfig</code> (Windows) o <code>ifconfig</code> (Mac/Linux)</li>
+                <li>Prueba primero con IP local (192.168.x.x) si están en la misma red</li>
+                <li>El host puede probar conectándose a sí mismo con 'localhost' o '127.0.0.1'</li>
+              </ul>
+            </div>
           </div>
         )}
 

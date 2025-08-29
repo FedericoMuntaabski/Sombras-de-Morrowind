@@ -53,7 +53,8 @@ const CreateRoomScreen: React.FC = () => {
       setCurrentScreen('waiting');
     } catch (error) {
       logger.error(`Failed to create room: ${error}`, 'CreateRoomScreen');
-      setError('Error al crear la sala. Inténtalo de nuevo.');
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear la sala';
+      setError(errorMessage);
     } finally {
       setIsCreating(false);
     }

@@ -30,7 +30,7 @@ const NAME_SUFFIXES = [
 ];
 
 const CharacterCreationScreen: React.FC = () => {
-  const { setCurrentScreen } = useAppStore();
+  const { setCurrentScreen, previousScreen } = useAppStore();
   const {
     currentCharacter,
     createNewCharacter,
@@ -88,14 +88,22 @@ const CharacterCreationScreen: React.FC = () => {
     if (!currentCharacter) return;
 
     finalizeCharacterPreset();
-    setCurrentScreen('menu');
-    logger.info('Character creation completed', 'CharacterCreation');
+    
+    // Navegar de vuelta a la pantalla anterior si venía de una sala, sino al menú
+    const targetScreen = previousScreen === 'waiting' ? 'waiting' : 'menu';
+    setCurrentScreen(targetScreen);
+    
+    logger.info(`Character creation completed, returning to ${targetScreen}`, 'CharacterCreation');
   };
 
   const handleCancel = () => {
     resetCurrentCharacter();
-    setCurrentScreen('menu');
-    logger.info('Character creation cancelled', 'CharacterCreation');
+    
+    // Navegar de vuelta a la pantalla anterior si venía de una sala, sino al menú
+    const targetScreen = previousScreen === 'waiting' ? 'waiting' : 'menu';
+    setCurrentScreen(targetScreen);
+    
+    logger.info(`Character creation cancelled, returning to ${targetScreen}`, 'CharacterCreation');
   };
 
   const renderNameStep = () => (

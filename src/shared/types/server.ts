@@ -254,6 +254,8 @@ export interface GameEvent {
 export enum GameEventType {
   // Conexión y salas
   SERVER_READY = 'server_ready',
+  PING = 'ping',
+  PONG = 'pong',
   CONNECTION_STATE_CHANGED = 'connectionStateChanged',
   JOIN_ROOM = 'join_room',
   ROOM_JOINED = 'room_joined',

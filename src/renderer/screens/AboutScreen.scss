@@ -185,6 +185,34 @@
       transform: translateY(-2px);
     }
 
+    &.implemented {
+      border-color: #4ade80;
+      background: rgba(74, 222, 128, 0.1);
+
+      h4 {
+        color: #4ade80;
+      }
+
+      &:hover {
+        border-color: #22c55e;
+        background: rgba(74, 222, 128, 0.15);
+      }
+    }
+
+    &.planned {
+      border-color: #fbbf24;
+      background: rgba(251, 191, 36, 0.1);
+
+      h4 {
+        color: #fbbf24;
+      }
+
+      &:hover {
+        border-color: #f59e0b;
+        background: rgba(251, 191, 36, 0.15);
+      }
+    }
+
     h4 {
       margin-bottom: 1rem;
       font-size: 1.1rem;

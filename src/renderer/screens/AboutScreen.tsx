@@ -32,11 +32,15 @@ const AboutScreen: React.FC = () => {
             <div className="info-grid">
               <div className="info-item">
                 <span className="info-label">Versión:</span>
-                <span className="info-value">1.0.0 Alpha</span>
+                <span className="info-value">1.0.0 - Fase 3</span>
               </div>
               <div className="info-item">
-                <span className="info-label">Fecha de Lanzamiento:</span>
-                <span className="info-value">Agosto 2025</span>
+                <span className="info-label">Estado:</span>
+                <span className="info-value">Sistema Multiplayer Funcional</span>
+              </div>
+              <div className="info-item">
+                <span className="info-label">Última Actualización:</span>
+                <span className="info-value">29 de Agosto, 2025</span>
               </div>
               <div className="info-item">
                 <span className="info-label">Desarrollador:</span>
@@ -44,52 +48,56 @@ const AboutScreen: React.FC = () => {
               </div>
               <div className="info-item">
                 <span className="info-label">Motor:</span>
-                <span className="info-value">Electron + React + Phaser.js</span>
+                <span className="info-value">Electron + React + TypeScript</span>
+              </div>
+              <div className="info-item">
+                <span className="info-label">Multijugador:</span>
+                <span className="info-value">WebSocket + Express Server</span>
               </div>
             </div>
           </div>
 
           <div className="game-description">
-            <h3>Descripción del Juego</h3>
+            <h3>Estado Actual del Proyecto</h3>
             <p>
-              Sombras de Morrowind es un juego de mesa digital cooperativo inspirado en el universo de 
-              The Elder Scrolls III: Morrowind. Los jugadores colaboran para explorar una isla mística, 
-              enfrentar amenazas ancestrales y derrotar a un Jefe Final mientras gestionan recursos, 
-              desarrollan sus personajes y toman decisiones estratégicas que afectarán el destino de todos.
+              <strong>Sombras de Morrowind</strong> es un juego de rol multijugador en desarrollo activo, 
+              actualmente en la <strong>Fase 3</strong> con sistema multiplayer completamente funcional. 
+              Los jugadores pueden crear y unirse a salas, chatear en tiempo real, y gestionar personajes 
+              con el sistema de atributos SPECIAL adaptado al universo de Morrowind.
             </p>
             <p>
-              El juego combina mecánicas clásicas de juegos de mesa con la inmersión digital, ofreciendo 
-              una experiencia única donde la cooperación es fundamental para la supervivencia en las 
-              tierras oscuras de Morrowind.
+              El proyecto ha evolucionado desde un concepto de juego de mesa digital hacia una experiencia 
+              multiplayer robusta, manteniendo la esencia cooperativa y la inmersión en el mundo de 
+              The Elder Scrolls III: Morrowind.
             </p>
           </div>
 
-          <div className="features">
-            <h3>Características Principales</h3>
+          <div className="current-features">
+            <h3>Funcionalidades Implementadas</h3>
             <div className="features-grid">
-              <div className="feature-item">
-                <h4>🎭 Sistema de Personajes</h4>
-                <p>5 razas únicas con clases especializadas y atributos SPECIAL adaptados.</p>
+              <div className="feature-item implemented">
+                <h4>� Sistema Multiplayer</h4>
+                <p>Servidor WebSocket, creación de salas, chat en tiempo real y sincronización de estados.</p>
               </div>
-              <div className="feature-item">
-                <h4>🗺️ Tablero Modular</h4>
-                <p>Exploración procedural de regiones temáticas con eventos dinámicos.</p>
+              <div className="feature-item implemented">
+                <h4>🎭 Gestión de Personajes</h4>
+                <p>Creación, validación y persistencia de personajes con 5 razas y sistema SPECIAL.</p>
               </div>
-              <div className="feature-item">
-                <h4>🃏 Sistema de Cartas</h4>
-                <p>Cartas de acción, bendiciones y maldiciones para combate estratégico.</p>
+              <div className="feature-item implemented">
+                <h4>� Salas de Espera</h4>
+                <p>Chat, estados "Listo/No Listo", selección de personajes y configuración de partidas.</p>
               </div>
-              <div className="feature-item">
-                <h4>👥 Cooperación Total</h4>
-                <p>Mecánicas diseñadas para fomentar la colaboración entre jugadores.</p>
+              <div className="feature-item implemented">
+                <h4>🎵 Sistema de Audio</h4>
+                <p>Música de fondo, efectos de sonido y controles de volumen completamente funcionales.</p>
               </div>
-              <div className="feature-item">
-                <h4>🐉 Jefes Épicos</h4>
-                <p>Enfrentamientos contra Daedra Lords y criaturas ancestrales.</p>
+              <div className="feature-item implemented">
+                <h4>� Configuración Avanzada</h4>
+                <p>Navegación inteligente, configuración de audio y sistema de opciones contextual.</p>
               </div>
-              <div className="feature-item">
-                <h4>📖 Narrativa Emergente</h4>
-                <p>Decisiones morales con consecuencias que afectan la historia.</p>
+              <div className="feature-item planned">
+                <h4>🎮 Mecánicas de Juego</h4>
+                <p>En desarrollo: Sistema de turnos, combate estratégico y exploración con Phaser 3.</p>
               </div>
             </div>
           </div>
@@ -107,13 +115,15 @@ const AboutScreen: React.FC = () => {
                 </ul>
               </div>
               <div className="technologies">
-                <h4>Tecnologías Utilizadas:</h4>
+                <h4>Tecnologías Actuales:</h4>
                 <ul>
-                  <li>TypeScript & React</li>
+                  <li>TypeScript & React 18</li>
                   <li>Electron Framework</li>
-                  <li>Phaser.js Game Engine</li>
                   <li>Zustand State Management</li>
-                  <li>WebSockets para Multijugador</li>
+                  <li>WebSockets + Express Server</li>
+                  <li>SCSS para estilos</li>
+                  <li>Jest para testing</li>
+                  <li>Phaser 3 (en integración)</li>
                 </ul>
               </div>
             </div>

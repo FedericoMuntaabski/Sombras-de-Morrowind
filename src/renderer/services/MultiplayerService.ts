@@ -51,6 +51,10 @@ export class MultiplayerService {
 
     try {
       await this.gameClient.connect();
+      
+      // Esperar más tiempo para asegurar que la conexión WebSocket esté completamente estable
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       logger.info('Connected to multiplayer server', 'MultiplayerService');
     } catch (error) {
       logger.error(`Failed to connect: ${error}`, 'MultiplayerService');

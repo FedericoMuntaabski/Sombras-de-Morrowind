@@ -25,7 +25,7 @@ export interface CreateRoomData {
   name: string;
   maxPlayers: number;
   password?: string;
-  isPublic: boolean;
+  isPublic?: boolean;
 }
 
 interface RoomStore {
@@ -147,7 +147,7 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
         maxPlayers: roomData.maxPlayers,
         currentPlayers: 1,
         hasPassword: !!roomData.password,
-        isPublic: roomData.isPublic,
+        isPublic: roomData.isPublic ?? true,
         status: 'waiting',
         createdAt: new Date()
       };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore } from '@renderer/store/appStore';
 import { useRoomStore } from '@renderer/store/roomStore';
+import { useCharacterStore } from '@renderer/store/characterStore';
 import { logger } from '@shared/utils/logger';
 import MedievalButton from '@renderer/components/ui/MedievalButton';
 import { NetworkUtils } from '@renderer/utils/NetworkUtils';
@@ -24,6 +25,7 @@ const WaitingRoomScreen: React.FC = () => {
     setPlayerReady,
     connectionStatus 
   } = useRoomStore();
+  const { characterPresets } = useCharacterStore();
 
   const [networkInfo, setNetworkInfo] = useState<{publicIP?: string; port: number} | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -33,6 +35,8 @@ const WaitingRoomScreen: React.FC = () => {
   const currentPlayer = players.find(p => p.name === playerName);
   const isHost = currentPlayer?.isHost || false;
   const allPlayersReady = players.length >= 2 && players.every(p => p.isReady);
+
+  // Cargar personajes guardados al inicio se hace automáticamente por Zustand persist
 
   // Obtener información de red al cargar si es host
   useEffect(() => {
@@ -208,29 +212,39 @@ const WaitingRoomScreen: React.FC = () => {
           <div className="preset-panel">
             <h3>Selecciona tu Personaje</h3>
             <div className="preset-selection">
-              <div className="preset-grid">
-                <div 
-                  className={`preset-card ${selectedPreset === 'guerrero' ? 'selected' : ''}`}
-                  onClick={() => setSelectedPreset('guerrero')}
-                >
-                  <h4>Guerrero</h4>
-                  <p>Especialista en combate cuerpo a cuerpo</p>
+              {characterPresets.length > 0 ? (
+                <div className="preset-grid">
+                  {characterPresets.map((character) => (
+                    <div 
+                      key={character.id}
+                      className={`preset-card ${selectedPreset === character.id ? 'selected' : ''}`}
+                      onClick={() => setSelectedPreset(character.id)}
+                    >
+                      <h4>{character.name}</h4>
+                      <p className="race-info">{character.race}</p>
+                      <div className="stats-summary">
+                        <span>STR: {character.special.strength}</span>
+                        <span>PER: {character.special.perception}</span>
+                        <span>END: {character.special.endurance}</span>
+                        <span>CHA: {character.special.charisma}</span>
+                        <span>INT: {character.special.intelligence}</span>
+                        <span>AGI: {character.special.agility}</span>
+                        <span>LUCK: {character.special.luck}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div 
-                  className={`preset-card ${selectedPreset === 'mago' ? 'selected' : ''}`}
-                  onClick={() => setSelectedPreset('mago')}
-                >
-                  <h4>Mago</h4>
-                  <p>Maestro de las artes arcanas</p>
+              ) : (
+                <div className="no-presets">
+                  <p>No tienes personajes creados.</p>
+                  <MedievalButton
+                    text="Crear Personaje"
+                    onClick={() => setCurrentScreen('characterCreation')}
+                    variant="primary"
+                    size="medium"
+                  />
                 </div>
-                <div 
-                  className={`preset-card ${selectedPreset === 'ladron' ? 'selected' : ''}`}
-                  onClick={() => setSelectedPreset('ladron')}
-                >
-                  <h4>Ladrón</h4>
-                  <p>Experto en sigilo y agilidad</p>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 

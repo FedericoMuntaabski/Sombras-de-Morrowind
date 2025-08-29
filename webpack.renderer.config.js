@@ -5,7 +5,8 @@ const webpack = require('webpack');
 module.exports = {
   mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   entry: './src/renderer/index.tsx',
-  target: 'electron-renderer',
+  target: 'web', // Cambiar de 'electron-renderer' a 'web' para evitar externals automáticos
+  externals: {}, // Forzar que no haya externals
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'renderer.js',
@@ -83,6 +84,20 @@ module.exports = {
     new webpack.ProvidePlugin({
       Buffer: ['buffer', 'Buffer'],
       process: 'process/browser',
+    }),
+    new webpack.BannerPlugin({
+      banner: `
+if (typeof global === 'undefined') {
+  var global = (function() {
+    if (typeof globalThis !== 'undefined') return globalThis;
+    if (typeof window !== 'undefined') return window;
+    if (typeof self !== 'undefined') return self;
+    throw new Error('Unable to locate global object');
+  })();
+}
+      `,
+      raw: true,
+      entryOnly: false,
     }),
   ],
   devtool: process.env.NODE_ENV === 'production' ? false : 'source-map',

@@ -11,8 +11,6 @@ const CreateRoomScreen: React.FC = () => {
   
   const [roomName, setRoomName] = useState('');
   const [maxPlayers, setMaxPlayers] = useState(4);
-  const [password, setPassword] = useState('');
-  const [isPublic, setIsPublic] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,9 +43,7 @@ const CreateRoomScreen: React.FC = () => {
     try {
       const roomData = {
         name: roomName.trim(),
-        maxPlayers,
-        password: password.trim() || undefined,
-        isPublic
+        maxPlayers
       };
 
       const roomId = await createRoom(roomData);
@@ -61,7 +57,7 @@ const CreateRoomScreen: React.FC = () => {
     } finally {
       setIsCreating(false);
     }
-  }, [roomName, playerName, maxPlayers, password, isPublic, createRoom, setCurrentScreen]);
+  }, [roomName, playerName, maxPlayers, createRoom, setCurrentScreen]);
 
   const handleBack = useCallback(() => {
     logger.info('Returning to main menu', 'CreateRoomScreen');
@@ -130,32 +126,6 @@ const CreateRoomScreen: React.FC = () => {
               <option value={5}>5 Jugadores</option>
               <option value={6}>6 Jugadores</option>
             </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">Contraseña (Opcional)</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Dejar vacío para sala sin contraseña"
-              maxLength={20}
-              disabled={isCreating}
-            />
-          </div>
-
-          <div className="form-group checkbox-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={isPublic}
-                onChange={(e) => setIsPublic(e.target.checked)}
-                disabled={isCreating}
-              />
-              <span className="checkmark"></span>
-              Sala pública (visible en la lista de salas)
-            </label>
           </div>
 
           <div className="form-actions">

@@ -57,7 +57,7 @@ class Application {
       icon: path.join(__dirname, '../assets/icon.png'),
       webPreferences: {
         nodeIntegration: isDev, // Habilitar solo en desarrollo para webpack-dev-server
-        contextIsolation: !isDev, // Deshabilitar en desarrollo para permitir require
+        contextIsolation: true, // Mantener siempre habilitado para seguridad y contextBridge
         allowRunningInsecureContent: isDev,
         experimentalFeatures: false,
         preload: path.join(__dirname, 'preload.js'),

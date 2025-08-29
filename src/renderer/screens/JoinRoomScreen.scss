@@ -107,128 +107,69 @@ $success-green: #5c8a3a;
   }
 
   .join-methods {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 2rem;
+    display: flex;
+    justify-content: center;
     margin-bottom: 2rem;
 
-    .join-by-code {
+    // Nuevo estilo para el formulario de conexión IP centrado
+    .ip-connection-centered {
       background: linear-gradient(135deg, 
         rgba($stone-dark, 0.9) 0%, 
         rgba($stone-medium, 0.9) 50%, 
         rgba($stone-dark, 0.9) 100%
       );
-      padding: 1.5rem;
+      padding: 2rem;
       border-radius: 8px;
       border: 2px solid rgba($secondary-gold, 0.3);
       box-shadow: 
         0 4px 16px rgba(0, 0, 0, 0.3),
         inset 0 1px 2px rgba($primary-gold, 0.1);
+      max-width: 500px;
+      width: 100%;
 
       h3 {
         color: $text-light;
-        margin: 0 0 1.5rem 0;
-        font-size: 1.3rem;
+        margin: 0 0 2rem 0;
+        font-size: 1.4rem;
         text-align: center;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
       }
 
-      .form-group {
-        margin-bottom: 1rem;
+      .connection-form {
+        .form-group {
+          margin-bottom: 1.5rem;
 
-        label {
-          display: block;
-          font-size: 0.9rem;
-          font-weight: 500;
-          color: $text-light;
-          margin-bottom: 0.5rem;
-          text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-        }
-
-        input {
-          width: 100%;
-          padding: 0.75rem;
-          font-size: 1rem;
-          font-family: 'Cinzel', serif;
-          background: rgba($stone-light, 0.8);
-          border: 2px solid rgba($secondary-gold, 0.4);
-          border-radius: 4px;
-          color: $text-light;
-          box-sizing: border-box;
-          transition: all 0.3s ease;
-
-          &:focus {
-            outline: none;
-            border-color: $primary-gold;
-            box-shadow: 0 0 8px rgba($primary-gold, 0.4);
-            background: rgba($stone-light, 0.9);
+          label {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: $text-light;
+            margin-bottom: 0.6rem;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
           }
 
-          &:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-          }
-
-          &::placeholder {
-            color: $text-dark;
-            font-style: italic;
-          }
-        }
-      }
-
-      .medieval-button {
-        width: 100%;
-        margin-top: 1rem;
-      }
-    }
-
-    .room-list {
-      background: linear-gradient(135deg, 
-        rgba($stone-dark, 0.9) 0%, 
-        rgba($stone-medium, 0.9) 50%, 
-        rgba($stone-dark, 0.9) 100%
-      );
-      padding: 1.5rem;
-      border-radius: 8px;
-      border: 2px solid rgba($secondary-gold, 0.3);
-      box-shadow: 
-        0 4px 16px rgba(0, 0, 0, 0.3),
-        inset 0 1px 2px rgba($primary-gold, 0.1);
-
-      .room-list-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        flex-wrap: wrap;
-        gap: 1rem;
-
-        h3 {
-          color: $text-light;
-          margin: 0;
-          font-size: 1.3rem;
-          text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-        }
-
-        .room-controls {
-          display: flex;
-          gap: 0.5rem;
-          align-items: center;
-
-          .search-input {
-            padding: 0.5rem;
-            font-size: 0.9rem;
+          input {
+            width: 100%;
+            padding: 0.9rem;
+            font-size: 1rem;
             font-family: 'Cinzel', serif;
             background: rgba($stone-light, 0.8);
-            border: 1px solid rgba($secondary-gold, 0.4);
+            border: 2px solid rgba($secondary-gold, 0.4);
             border-radius: 4px;
             color: $text-light;
-            width: 150px;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
 
             &:focus {
               outline: none;
               border-color: $primary-gold;
-              box-shadow: 0 0 4px rgba($primary-gold, 0.3);
+              box-shadow: 0 0 8px rgba($primary-gold, 0.4);
+              background: rgba($stone-light, 0.9);
+            }
+
+            &:disabled {
+              opacity: 0.6;
+              cursor: not-allowed;
             }
 
             &::placeholder {
@@ -237,101 +178,13 @@ $success-green: #5c8a3a;
             }
           }
         }
-      }
 
-      .rooms-container {
-        max-height: 300px;
-        overflow-y: auto;
-        
-        &::-webkit-scrollbar {
-          width: 8px;
-        }
-        
-        &::-webkit-scrollbar-track {
-          background: rgba($stone-dark, 0.5);
-          border-radius: 4px;
-        }
-        
-        &::-webkit-scrollbar-thumb {
-          background: rgba($secondary-gold, 0.5);
-          border-radius: 4px;
-          
-          &:hover {
-            background: rgba($primary-gold, 0.6);
-          }
-        }
-
-        .loading-message, .no-rooms-message {
+        .connect-button-container {
+          margin-top: 2rem;
           text-align: center;
-          padding: 2rem;
-          color: $text-medium;
-          
-          p {
-            margin: 0.5rem 0;
-            
-            &.hint {
-              font-size: 0.85rem;
-              color: $text-dark;
-              font-style: italic;
-            }
-          }
-        }
 
-        .room-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 1rem;
-          margin-bottom: 0.75rem;
-          background: rgba($stone-light, 0.6);
-          border: 1px solid rgba($secondary-gold, 0.2);
-          border-radius: 4px;
-          transition: all 0.3s ease;
-
-          &:hover {
-            background: rgba($stone-light, 0.8);
-            border-color: rgba($primary-gold, 0.4);
-            transform: translateY(-1px);
-          }
-
-          .room-info {
-            flex: 1;
-
-            .room-name {
-              font-size: 1.1rem;
-              font-weight: 600;
-              color: $text-light;
-              margin-bottom: 0.25rem;
-              display: flex;
-              align-items: center;
-              gap: 0.5rem;
-
-              .password-icon {
-                font-size: 0.8rem;
-                opacity: 0.7;
-              }
-            }
-
-            .room-details {
-              display: flex;
-              gap: 1rem;
-              font-size: 0.8rem;
-              color: $text-medium;
-              flex-wrap: wrap;
-
-              span {
-                &.players {
-                  color: $primary-gold;
-                  font-weight: 500;
-                }
-              }
-            }
-          }
-
-          .room-actions {
-            .medieval-button {
-              min-width: 80px;
-            }
+          .medieval-button {
+            min-width: 200px;
           }
         }
       }
@@ -344,93 +197,6 @@ $success-green: #5c8a3a;
     padding-top: 1rem;
   }
 
-  // Modal de contraseña
-  .password-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    backdrop-filter: blur(2px);
-
-    .password-modal {
-      background: linear-gradient(135deg, 
-        rgba($stone-dark, 0.95) 0%, 
-        rgba($stone-medium, 0.95) 50%, 
-        rgba($stone-dark, 0.95) 100%
-      );
-      padding: 2rem;
-      border-radius: 8px;
-      border: 2px solid rgba($primary-gold, 0.5);
-      box-shadow: 
-        0 8px 32px rgba(0, 0, 0, 0.6),
-        inset 0 1px 2px rgba($primary-gold, 0.2);
-      max-width: 400px;
-      width: 90%;
-
-      h3 {
-        color: $text-light;
-        margin: 0 0 0.5rem 0;
-        font-size: 1.5rem;
-        text-align: center;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-      }
-
-      p {
-        color: $text-medium;
-        margin: 0 0 1.5rem 0;
-        text-align: center;
-        font-size: 0.95rem;
-      }
-
-      .form-group {
-        margin-bottom: 1.5rem;
-
-        label {
-          display: block;
-          font-size: 0.9rem;
-          font-weight: 500;
-          color: $text-light;
-          margin-bottom: 0.5rem;
-          text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-        }
-
-        input {
-          width: 100%;
-          padding: 0.75rem;
-          font-size: 1rem;
-          font-family: 'Cinzel', serif;
-          background: rgba($stone-light, 0.8);
-          border: 2px solid rgba($secondary-gold, 0.4);
-          border-radius: 4px;
-          color: $text-light;
-          box-sizing: border-box;
-
-          &:focus {
-            outline: none;
-            border-color: $primary-gold;
-            box-shadow: 0 0 8px rgba($primary-gold, 0.4);
-          }
-        }
-      }
-
-      .modal-actions {
-        display: flex;
-        gap: 1rem;
-        justify-content: center;
-
-        .medieval-button {
-          flex: 1;
-          max-width: 120px;
-        }
-      }
-    }
-  }
 }
 
 // Responsive design
@@ -447,35 +213,24 @@ $success-green: #5c8a3a;
     }
 
     .join-methods {
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
+      .ip-connection-centered {
+        padding: 1.5rem;
+        max-width: 400px;
 
-      .room-list {
-        .room-list-header {
-          flex-direction: column;
-          align-items: stretch;
+        .connection-form {
+          .form-group {
+            margin-bottom: 1.2rem;
 
-          .room-controls {
-            justify-content: center;
-
-            .search-input {
-              width: 200px;
+            input {
+              padding: 0.8rem;
             }
           }
-        }
 
-        .rooms-container {
-          .room-item {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 1rem;
+          .connect-button-container {
+            margin-top: 1.5rem;
 
-            .room-info .room-details {
-              justify-content: center;
-            }
-
-            .room-actions {
-              text-align: center;
+            .medieval-button {
+              min-width: 150px;
             }
           }
         }
@@ -495,9 +250,7 @@ $success-green: #5c8a3a;
     }
 
     .join-methods {
-      .room-list .rooms-container {
-        max-height: 200px;
-      }
+      margin-bottom: 1rem;
     }
   }
 }

@@ -5,6 +5,13 @@ if (typeof window !== 'undefined') {
   (window as any).global = window;
 }
 
+// Exponer require globalmente para webpack-dev-server en desarrollo
+if (process.env.NODE_ENV === 'development') {
+  (window as any).require = require;
+  (window as any).module = module;
+  (window as any).exports = exports;
+}
+
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {

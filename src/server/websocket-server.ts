@@ -1,5 +1,6 @@
 import { config } from 'dotenv';
 import { GameServer } from './GameServer';
+import { logger } from '../shared/utils/logger';
 import type { ServerConfig } from '../shared/types/server';
 
 // Cargar variables de entorno
@@ -20,13 +21,13 @@ const serverConfig: ServerConfig = {
 const gameServer = new GameServer(serverConfig);
 
 gameServer.start().then(() => {
-  console.log(`[Server] 🚀 Servidor WebSocket iniciado exitosamente`);
-  console.log(`[Server] 📍 URL: http://${serverConfig.host}:${serverConfig.port}`);
-  console.log(`[Server] 🌐 WebSocket: ws://${serverConfig.host}:${serverConfig.port}/ws`);
-  console.log(`[Server] 🎮 API Health: http://${serverConfig.host}:${serverConfig.port}/api/health`);
-  console.log(`[Server] 🏰 Sombras de Morrowind está listo para multijugador!`);
+  logger.info('🚀 Servidor WebSocket iniciado exitosamente', 'Server');
+  logger.info(`📍 URL: http://${serverConfig.host}:${serverConfig.port}`, 'Server');
+  logger.info(`🌐 WebSocket: ws://${serverConfig.host}:${serverConfig.port}/ws`, 'Server');
+  logger.info(`🎮 API Health: http://${serverConfig.host}:${serverConfig.port}/api/health`, 'Server');
+  logger.info('🏰 Sombras de Morrowind está listo para multijugador!', 'Server');
 }).catch((error) => {
-  console.error('[Server] ❌ Error al iniciar el servidor:', error);
+  logger.error(`❌ Error al iniciar el servidor: ${error}`, 'Server');
   process.exit(1);
 });
 

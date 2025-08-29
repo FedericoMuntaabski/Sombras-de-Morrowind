@@ -1,4 +1,5 @@
 import * as WebSocket from 'ws';
+import { logger } from '@shared/utils/logger';
 import { GameEventType } from '@shared/types/server';
 
 export enum ErrorType {
@@ -364,7 +365,7 @@ export class ErrorHandlerService {
     try {
       ws.send(JSON.stringify(errorPayload));
     } catch (sendError) {
-      console.error('Failed to send error to client:', sendError);
+      logger.error(`Failed to send error to client: ${sendError}`, 'ErrorHandler');
     }
   }
 

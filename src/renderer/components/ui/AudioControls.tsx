@@ -163,4 +163,4 @@ const AudioControls: React.FC = () => {
   );
 };
 
-export default AudioControls;
+export default React.memo(AudioControls);

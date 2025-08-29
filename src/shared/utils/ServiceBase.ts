@@ -1,3 +1,5 @@
+import { logger } from './logger';
+
 /**
  * Clase base abstracta para implementar el patrón Singleton
  * Elimina la duplicación de código en los servicios
@@ -81,22 +83,22 @@ export function logOperation(serviceName: string) {
           return result
             .then((res) => {
               const duration = Date.now() - startTime;
-              console.log(`[${serviceName}:${propertyName}] Completed in ${duration}ms`);
+              logger.debug(`[${serviceName}:${propertyName}] Completed in ${duration}ms`, serviceName);
               return res;
             })
             .catch((error) => {
               const duration = Date.now() - startTime;
-              console.error(`[${serviceName}:${propertyName}] Failed after ${duration}ms:`, error);
+              logger.error(`[${serviceName}:${propertyName}] Failed after ${duration}ms: ${error}`, serviceName);
               throw error;
             });
         }
         
         const duration = Date.now() - startTime;
-        console.log(`[${serviceName}:${propertyName}] Completed in ${duration}ms`);
+        logger.debug(`[${serviceName}:${propertyName}] Completed in ${duration}ms`, serviceName);
         return result;
       } catch (error) {
         const duration = Date.now() - startTime;
-        console.error(`[${serviceName}:${propertyName}] Failed after ${duration}ms:`, error);
+        logger.error(`[${serviceName}:${propertyName}] Failed after ${duration}ms: ${error}`, serviceName);
         throw error;
       }
     };

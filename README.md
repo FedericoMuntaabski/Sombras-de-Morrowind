@@ -1,53 +1,144 @@
-# Sombras de Morrowind
+# 🏰 Sombras de Morrowind
 
-Un juego de mesa digital cooperativo inspirado en el universo de The Elder Scrolls III: Morrowind.
+**Estado Actual:** ✅ Sistema Multiplayer Funcional - Fase 3 Completada  
+**Versión:** 1.0.0 | **Última Actualización:** 29 de Agosto, 2025
 
-## 📖 Descripción
+Un juego de rol multijugador desarrollado con **Electron**, **React** y **TypeScript**, inspirado en el universo de The Elder Scrolls III: Morrowind.
 
-**Sombras de Morrowind** es un juego de mesa digital cooperativo donde los jugadores encarnan héroes explorando una isla mística plagada de monstruos, trampas arcanas y facciones rivales. Inspirado directamente en el universo de Morrowind, el juego combina mecánicas de cartas de acción, tablero modular, eventos dinámicos y un sistema de progresión basado en experiencia.
+---
 
-### 🎯 Características Principales
+## � Inicio Rápido
 
-- **Cooperación Total**: Los jugadores deben colaborar para derrotar al Jefe Final
-- **Sistema SPECIAL Adaptado**: Atributos clásicos adaptados al universo de Morrowind
-- **Tablero Modular**: Exploración procedural de regiones únicas
-- **Cartas de Acción**: Sistema dinámico de combate y habilidades
-- **Bendiciones y Maldiciones**: Efectos temporales y permanentes que afectan la estrategia
-- **Narrativa Emergente**: Eventos aleatorios y decisiones que impactan la partida
+### Para Desarrollo
+```bash
+# Entorno completo (recomendado)
+npm run dev:combined
 
-## 🎮 Mecánicas de Juego
+# Para testing de salas multijugador (2 clientes)
+npm run dev:testing
+```
 
-### Sistema de Personajes
-- **5 Razas**: Humano, Dunmer, Khajiit, Argoniano, Orco
-- **5 Clases**: Guerrero, Hechicero, Scout, Clérigo, Diplomático
-- **Facciones**: Casas nobles, gremios de magos, cultos e independientes
+### Para Testing de Funcionalidades Multiplayer
+1. Ejecuta: `npm run dev:testing`
+2. En el cliente **HOST**: Crear Sala
+3. En el cliente **CLIENTE**: Unirse a Sala
+4. Probar chat, estados "Listo/No Listo", inicio de partida
 
-### Atributos SPECIAL
-| Atributo | Efecto |
-|----------|--------|
-| **Strength** | Daño físico y capacidad de carga |
-| **Perception** | Detección de trampas y enemigos ocultos |
-| **Endurance** | Vida máxima y resistencia ambiental |
-| **Charisma** | Influencia sobre NPCs y facciones |
-| **Intelligence** | Efectividad mágica y duración de efectos |
-| **Agility** | Movimiento en tablero y evasión |
-| **Luck** | Eventos positivos y críticos especiales |
+---
 
-### Regiones del Tablero
-- **Volcanes**: Peligros ambientales y recursos raros
-- **Pantanos**: Criaturas hostiles y hierbas alquímicas
-- **Templos Antiguos**: Artefactos poderosos y trampas arcanas
-- **Aldeas**: NPCs, comercio y misiones secundarias
+## 🎮 Funcionalidades Implementadas
 
-## 🛠️ Tecnología
+### ✅ Sistema Completo Multiplayer
+- **Servidor WebSocket** con Express y TypeScript
+- **Creación y gestión de salas** con configuración personalizable
+- **Chat en tiempo real** en sala de espera
+- **Sistema de estados** "Listo/No Listo" entre jugadores
+- **Detección automática de IP** para hosting local
+- **Reconexión y manejo de desconexiones**
 
-### Stack Tecnológico
-- **Lenguaje**: TypeScript (tipado estricto)
-- **Framework**: Electron (aplicación de escritorio multiplataforma)
-- **UI**: React con hooks
-- **Motor Gráfico**: Phaser.js 3.x
-- **Networking**: WebSockets para multijugador
-- **Testing**: Jest + React Testing Library
+### ✅ Gestión de Personajes
+- **Creación de personajes** con presets personalizables
+- **5 Razas disponibles**: Humano, Dunmer, Khajiit, Argoniano, Orco
+- **Sistema de atributos SPECIAL** adaptado a Morrowind
+- **Persistencia de personajes** entre sesiones
+- **Validación de presets** y atributos
+
+### ✅ Interfaz de Usuario Avanzada
+- **Diseño medieval/fantasy** coherente y temático
+- **Navegación fluida** entre pantallas con historial
+- **Componentes reutilizables** optimizados con React.memo
+- **Sistema de audio** con música de fondo y efectos
+- **Configuración completa** con navegación contextual
+
+### ✅ Arquitectura Robusta
+- **TypeScript estricto** - 0 errores de tipos
+- **Manejo centralizado de errores** con logging avanzado
+- **Content Security Policy** configurada correctamente
+- **Patrón Singleton** para servicios compartidos
+- **Testing unitario** con Jest configurado
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+src/
+├── main/              # Proceso principal de Electron
+├── renderer/          # Interfaz React + componentes UI
+├── server/            # Servidor WebSocket + API REST  
+├── shared/            # Tipos, servicios y utilidades compartidas
+└── test/              # Pruebas unitarias
+
+scripts/
+├── start-combined.js  # Entorno desarrollo completo
+└── start-testing.js   # Testing salas multijugador
+
+docs/
+└── README.md         # Documentación técnica completa
+```
+
+---
+
+## 🛠️ Scripts Disponibles
+
+| Script | Descripción |
+|--------|-------------|
+| `npm run dev:combined` | **⭐ PRINCIPAL**: Entorno completo (servidor + webpack + electron) |
+| `npm run dev:testing` | **🧪 TESTING**: Dos clientes + servidor para testing multijugador |
+| `npm run host` | Solo servidor WebSocket (puerto 3000) |
+| `npm run dev:renderer` | Solo Webpack Dev Server (puerto 8080) |
+| `npm start` | Solo aplicación Electron |
+| `npm run build` | Construir para producción |
+| `npm test` | Ejecutar pruebas unitarias |
+| `npm run type-check` | Verificar tipos TypeScript |
+
+---
+
+## 🎯 Tecnologías Principales
+
+- **[Electron](https://electronjs.org/)** - Framework de aplicaciones de escritorio
+- **[React 18](https://react.dev/)** - Biblioteca de interfaz de usuario con hooks
+- **[TypeScript](https://typescriptlang.org/)** - Tipado estático y desarrollo robusto  
+- **[Zustand](https://zustand-demo.pmnd.rs/)** - Gestión de estado simple y efectiva
+- **[Phaser 3](https://phaser.io/)** - Motor de juego 2D para mecánicas de juego
+- **[WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)** - Comunicación en tiempo real
+- **[Express](https://expressjs.com/)** - Servidor HTTP y API REST
+- **[SCSS](https://sass-lang.com/)** - Preprocesador CSS para estilos avanzados
+
+---
+
+## � Próximos Pasos
+
+### 🎯 Prioridad Alta
+- **Optimización de rendimiento** - Lazy loading y code splitting
+- **Mejoras de UX** - Indicadores de conexión y notificaciones
+- **Sistema de juego** - Implementar mecánicas en Phaser
+
+### 🚀 Características Futuras  
+- Sistema de rankings y estadísticas
+- Espectadores en salas multijugador
+- Replay y grabación de partidas
+- Modo offline con IA
+
+---
+
+## 🏆 Estado del Proyecto
+
+**✅ COMPLETADO** - Sistema base multiplayer totalmente funcional  
+**🔄 EN PROGRESO** - Optimizaciones y mejoras de experiencia  
+**📅 PLANIFICADO** - Mecánicas de juego específicas de Morrowind
+
+El proyecto tiene una **base sólida y estable**, listo para el desarrollo de características de gameplay avanzadas.
+
+---
+
+## 📞 Información Técnica
+
+**Puertos utilizados:** 3000 (WebSocket), 8080 (Webpack)  
+**Plataformas:** Windows, macOS, Linux  
+**Node.js:** ≥16.0.0 recomendado  
+
+📖 **Documentación completa:** `docs/README.md`
 
 ### Arquitectura
 - **Patrón**: Modular con separación de responsabilidades

@@ -1,4 +1,5 @@
 import { Character } from '@shared/types/character';
+import { logger } from '@shared/utils/logger';
 import fs from 'fs';
 import path from 'path';
 
@@ -62,7 +63,7 @@ export class CharacterPersistenceService {
         }
       }
     } catch (error) {
-      console.error('Error cargando base de datos de personajes:', error);
+      logger.error(`Error loading character database: ${error}`, 'CharacterPersistence');
     }
 
     // Crear nueva base de datos si no existe o está corrupta
@@ -79,7 +80,7 @@ export class CharacterPersistenceService {
       const data = JSON.stringify(this.database, null, 2);
       fs.writeFileSync(this.dbPath, data, 'utf-8');
     } catch (error) {
-      console.error('Error guardando base de datos de personajes:', error);
+      logger.error(`Error saving character database: ${error}`, 'CharacterPersistence');
     }
   }
 
@@ -212,7 +213,7 @@ export class CharacterPersistenceService {
 
       return characterId;
     } catch (error) {
-      console.error('Error importando personaje:', error);
+      logger.error(`Error importing character: ${error}`, 'CharacterPersistence');
       return null;
     }
   }

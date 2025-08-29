@@ -110,4 +110,4 @@ const MedievalButton: React.FC<MedievalButtonProps> = ({
   );
 };
 
-export default MedievalButton;
+export default React.memo(MedievalButton);

@@ -1,5 +1,6 @@
 import { Character } from '@shared/types/character';
 import { RACES } from '../data/characterData';
+import { logger } from '@shared/utils/logger';
 import fs from 'fs';
 import path from 'path';
 
@@ -85,7 +86,7 @@ export class PresetValidationService {
         }
       }
     } catch (error) {
-      console.error('Error cargando base de datos de presets:', error);
+      logger.error(`Error loading preset database: ${error}`, 'PresetValidation');
     }
 
     // Crear nueva base de datos con valores por defecto
@@ -135,7 +136,7 @@ export class PresetValidationService {
       const data = JSON.stringify(db, null, 2);
       fs.writeFileSync(this.dbPath, data, 'utf-8');
     } catch (error) {
-      console.error('Error guardando base de datos de presets:', error);
+      logger.error(`Error saving preset database: ${error}`, 'PresetValidation');
     }
   }
 
@@ -454,7 +455,7 @@ export class PresetValidationService {
       this.saveDatabase();
       return true;
     } catch (error) {
-      console.error('Error importando base de datos de presets:', error);
+      logger.error(`Error importing preset database: ${error}`, 'PresetValidation');
       return false;
     }
   }

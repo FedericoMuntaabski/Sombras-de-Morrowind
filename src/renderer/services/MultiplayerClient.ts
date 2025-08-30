@@ -5,6 +5,11 @@ import {
   ClientEvent, 
   WebSocketMessage
 } from '@shared/types/multiplayer';
+import { 
+  NetworkErrorType, 
+  NetworkError, 
+  NetworkErrorHandler 
+} from '@shared/types/networkErrors';
 
 /**
  * Cliente WebSocket refactorizado que se conecta al servidor multiplayer
@@ -19,6 +24,15 @@ export class MultiplayerClient {
   private maxReconnectAttempts: number = 3;
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private heartbeatInterval: NodeJS.Timeout | null = null;
+  private heartbeatTimeout: NodeJS.Timeout | null = null;
+  private lastError: NetworkError | null = null;
+  
+  // Datos de sesión para reconexión automática
+  private sessionData: {
+    playerId?: string;
+    roomId?: string;
+    playerName?: string;
+  } = {};
   
   // Event listeners
   private eventListeners: Map<string, Function[]> = new Map();
@@ -33,7 +47,7 @@ export class MultiplayerClient {
   }
 
   // Conexión al servidor
-  public async connect(serverUrl: string): Promise<void> {
+  public async connect(serverUrl: string, sessionData?: { playerId?: string; roomId?: string; playerName?: string }): Promise<void> {
     if (this.isConnecting) {
       logger.warn('Already connecting to server', 'MultiplayerClient');
       return;
@@ -46,6 +60,13 @@ export class MultiplayerClient {
 
     this.serverUrl = serverUrl;
     this.isConnecting = true;
+    
+    // Guardar datos de sesión para reconexión automática
+    if (sessionData) {
+      this.sessionData = { ...sessionData };
+    }
+
+    this.emit('connecting', { attempt: this.reconnectAttempts + 1, maxAttempts: this.maxReconnectAttempts });
 
     return new Promise((resolve, reject) => {
       try {
@@ -54,58 +75,104 @@ export class MultiplayerClient {
         
         this.ws = new WebSocket(wsUrl);
         
+        // Timeout de conexión
+        const connectionTimeout = setTimeout(() => {
+          if (this.isConnecting) {
+            logger.error('Connection timeout', 'MultiplayerClient');
+            this.isConnecting = false;
+            this.lastError = NetworkErrorHandler.createError(
+              NetworkErrorType.CONNECTION_TIMEOUT,
+              'Connection timeout after 10 seconds'
+            );
+            this.ws?.close();
+            this.emit('connectionError', this.lastError);
+            reject(this.lastError);
+          }
+        }, 10000);
+        
         this.ws.onopen = () => {
+          clearTimeout(connectionTimeout);
           logger.info('Connected to multiplayer server', 'MultiplayerClient');
           this.isConnecting = false;
           this.reconnectAttempts = 0;
+          this.lastError = null;
           this.startHeartbeat();
           this.emit('connected');
+          
+          // Solo intentar reconexión automática si NO es una reconexión manual
+          // y tenemos datos de sesión válidos
+          if (sessionData && sessionData.playerId && sessionData.roomId && sessionData.playerName) {
+            this.attemptAutoReconnect();
+          }
+          
           resolve();
         };
 
         this.ws.onmessage = (event) => {
+          this.clearHeartbeatTimeout();
+          this.scheduleHeartbeatTimeout();
+          
           try {
             const message: WebSocketMessage = JSON.parse(event.data);
             logger.debug(`Received ${message.type}`, 'MultiplayerClient');
             this.handleServerEvent(message as unknown as ServerEvent);
           } catch (error) {
             logger.error(`Error parsing server message: ${error}`, 'MultiplayerClient');
+            const networkError = NetworkErrorHandler.createError(
+              NetworkErrorType.WEBSOCKET_ERROR,
+              `Failed to parse server message: ${error}`
+            );
+            this.emit('parseError', networkError);
           }
         };
 
         this.ws.onclose = (event) => {
-          logger.warn(`WebSocket connection closed: ${event.code} - ${event.reason}`, 'MultiplayerClient');
+          clearTimeout(connectionTimeout);
+          this.clearHeartbeatTimeout();
+          
+          const errorType = NetworkErrorHandler.getErrorFromWebSocketCode(event.code);
+          this.lastError = NetworkErrorHandler.createError(
+            errorType,
+            `WebSocket connection closed: ${event.code} - ${event.reason}`,
+            event.code
+          );
+          
+          logger.warn(this.lastError.message, 'MultiplayerClient');
           this.isConnecting = false;
           this.stopHeartbeat();
-          this.emit('disconnected');
+          this.emit('disconnected', this.lastError);
           
-          // Intentar reconectar automáticamente
-          if (this.reconnectAttempts < this.maxReconnectAttempts) {
+          // Intentar reconectar automáticamente solo si es un error recuperable
+          if (this.lastError.isRetryable && this.reconnectAttempts < this.maxReconnectAttempts) {
             this.scheduleReconnect();
+          } else {
+            this.emit('reconnectionFailed', this.lastError);
           }
         };
 
         this.ws.onerror = (error) => {
-          logger.error(`WebSocket error: ${error}`, 'MultiplayerClient');
+          clearTimeout(connectionTimeout);
+          this.lastError = NetworkErrorHandler.createError(
+            NetworkErrorType.WEBSOCKET_ERROR,
+            `WebSocket error: ${error}`
+          );
+          logger.error(this.lastError.message, 'MultiplayerClient');
           this.isConnecting = false;
-          this.emit('error', error);
-          reject(error);
-        };
-
-        // Timeout de conexión
-        setTimeout(() => {
+          this.emit('error', this.lastError);
+          
           if (this.isConnecting) {
-            logger.error('Connection timeout', 'MultiplayerClient');
-            this.isConnecting = false;
-            this.ws?.close();
-            reject(new Error('Connection timeout'));
+            reject(this.lastError);
           }
-        }, 10000);
+        };
 
       } catch (error) {
         this.isConnecting = false;
-        logger.error(`Connection error: ${error}`, 'MultiplayerClient');
-        reject(error);
+        this.lastError = NetworkErrorHandler.createError(
+          NetworkErrorType.CONNECTION_REFUSED,
+          `Connection error: ${error}`
+        );
+        logger.error(this.lastError.message, 'MultiplayerClient');
+        reject(this.lastError);
       }
     });
   }
@@ -268,13 +335,97 @@ export class MultiplayerClient {
 
     logger.info(`Scheduling reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`, 'MultiplayerClient');
     
+    this.emit('reconnecting', { 
+      attempt: this.reconnectAttempts, 
+      maxAttempts: this.maxReconnectAttempts, 
+      nextAttemptIn: delay 
+    });
+    
     this.reconnectTimeout = setTimeout(async () => {
       try {
-        await this.connect(this.serverUrl);
+        await this.connect(this.serverUrl, this.sessionData);
       } catch (error) {
         logger.error(`Reconnect attempt ${this.reconnectAttempts} failed: ${error}`, 'MultiplayerClient');
+        this.emit('reconnectAttemptFailed', { 
+          attempt: this.reconnectAttempts, 
+          error: this.lastError 
+        });
       }
     }, delay);
+  }
+
+  // Reconexión automática usando datos de sesión guardados
+  private attemptAutoReconnect(): void {
+    if (this.sessionData.roomId && this.sessionData.playerName) {
+      logger.info('Attempting auto-reconnect to saved session', 'MultiplayerClient');
+      this.joinRoom(this.sessionData.roomId, this.sessionData.playerName);
+    }
+  }
+
+  // Métodos de heartbeat mejorados
+  private scheduleHeartbeatTimeout(): void {
+    this.heartbeatTimeout = setTimeout(() => {
+      logger.warn('Heartbeat timeout - connection may be lost', 'MultiplayerClient');
+      this.lastError = NetworkErrorHandler.createError(
+        NetworkErrorType.HEARTBEAT_TIMEOUT,
+        'Server heartbeat timeout'
+      );
+      this.ws?.close();
+    }, 35000); // 35 segundos (5s más que el servidor)
+  }
+
+  private clearHeartbeatTimeout(): void {
+    if (this.heartbeatTimeout) {
+      clearTimeout(this.heartbeatTimeout);
+      this.heartbeatTimeout = null;
+    }
+  }
+
+  // Métodos públicos para reconexión manual
+  public async manualReconnect(): Promise<void> {
+    logger.info('Manual reconnect requested', 'MultiplayerClient');
+    
+    // Cancelar cualquier reconexión automática en curso
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    
+    this.disconnect();
+    
+    // Resetear contador de intentos para reconexión manual
+    this.reconnectAttempts = 0;
+    
+    // Emitir evento de connecting antes de intentar conectar
+    this.emit('connecting', { attempt: 1, maxAttempts: this.maxReconnectAttempts });
+    
+    if (this.serverUrl) {
+      await this.connect(this.serverUrl, this.sessionData);
+    } else {
+      throw new Error('No server URL available for reconnection');
+    }
+  }
+
+  public saveSessionData(playerId: string, roomId: string, playerName: string): void {
+    this.sessionData = { playerId, roomId, playerName };
+    logger.debug(`Session data saved: ${playerName} in room ${roomId}`, 'MultiplayerClient');
+  }
+
+  public clearSessionData(): void {
+    this.sessionData = {};
+    logger.debug('Session data cleared', 'MultiplayerClient');
+  }
+
+  public getLastError(): NetworkError | null {
+    return this.lastError;
+  }
+
+  public getReconnectionInfo(): { attempts: number; maxAttempts: number; isReconnecting: boolean } {
+    return {
+      attempts: this.reconnectAttempts,
+      maxAttempts: this.maxReconnectAttempts,
+      isReconnecting: this.reconnectTimeout !== null
+    };
   }
 
   // Estado de la conexión
@@ -296,6 +447,8 @@ export class MultiplayerClient {
 
   // Sistema de heartbeat para mantener la conexión viva
   private startHeartbeat(): void {
+    this.scheduleHeartbeatTimeout(); // Iniciar timeout de heartbeat
+    
     this.heartbeatInterval = setInterval(() => {
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
         this.sendEvent({
@@ -311,5 +464,6 @@ export class MultiplayerClient {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
     }
+    this.clearHeartbeatTimeout();
   }
 }

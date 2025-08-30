@@ -6,7 +6,7 @@ import { Player, Message, RoomState } from '@shared/types/multiplayer';
 interface RoomStore {
   // Estado actual de la sala (reflejo del servidor)
   currentRoom: RoomState | null;
-  connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
+  connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error' | 'reconnecting';
   
   // Estado del jugador local
   playerName: string;
@@ -14,6 +14,23 @@ interface RoomStore {
   
   // Configuración del servidor
   serverUrl: string | null;
+  
+  // Estado de reconexión
+  reconnectionState: {
+    isReconnecting: boolean;
+    attemptCount: number;
+    maxAttempts: number;
+    nextAttemptIn: number;
+    lastError: string | null;
+  };
+  
+  // Credenciales de sesión guardadas
+  sessionData: {
+    lastPlayerId: string | null;
+    lastRoomId: string | null;
+    lastPlayerName: string | null;
+    lastServerUrl: string | null;
+  };
   
   // Acciones que reflejan el estado del servidor (NO modifican directamente)
   setRoom: (room: RoomState) => void;
@@ -30,7 +47,14 @@ interface RoomStore {
   setPlayerName: (name: string) => void;
   setPlayerId: (id: string | null) => void;
   setServerUrl: (url: string) => void;
-  setConnectionStatus: (status: 'disconnected' | 'connecting' | 'connected' | 'error') => void;
+  setConnectionStatus: (status: 'disconnected' | 'connecting' | 'connected' | 'error' | 'reconnecting') => void;
+  
+  // Acciones de reconexión
+  setReconnectionState: (state: Partial<RoomStore['reconnectionState']>) => void;
+  setSessionData: (data: Partial<RoomStore['sessionData']>) => void;
+  saveSessionToStorage: () => void;
+  loadSessionFromStorage: () => void;
+  clearSession: () => void;
   
   // Utilidades
   clearRoom: () => void;
@@ -44,6 +68,23 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
   playerName: '',
   playerId: null,
   serverUrl: null,
+  
+  // Estado de reconexión inicial
+  reconnectionState: {
+    isReconnecting: false,
+    attemptCount: 0,
+    maxAttempts: 3,
+    nextAttemptIn: 0,
+    lastError: null,
+  },
+  
+  // Datos de sesión inicial
+  sessionData: {
+    lastPlayerId: null,
+    lastRoomId: null,
+    lastPlayerName: null,
+    lastServerUrl: null,
+  },
 
   // Acciones que reflejan el estado del servidor
   setRoom: (room: RoomState) => {
@@ -140,7 +181,7 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
       currentRoom: {
         ...currentRoom,
         players: currentRoom.players.map(p => 
-          p.id === playerId ? { ...p, preset } : p
+          p.id === playerId ? { ...p, characterPreset: preset } : p
         )
       }
     });
@@ -182,6 +223,73 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
   setConnectionStatus: (status) => {
     set({ connectionStatus: status });
     logger.debug(`Connection status: ${status}`, 'RoomStore');
+  },
+
+  // Acciones de reconexión
+  setReconnectionState: (newState) => {
+    const { reconnectionState } = get();
+    set({
+      reconnectionState: { ...reconnectionState, ...newState }
+    });
+    logger.debug(`Reconnection state updated: ${JSON.stringify(newState)}`, 'RoomStore');
+  },
+
+  setSessionData: (newData) => {
+    const { sessionData } = get();
+    set({
+      sessionData: { ...sessionData, ...newData }
+    });
+    logger.debug(`Session data updated: ${JSON.stringify(newData)}`, 'RoomStore');
+  },
+
+  saveSessionToStorage: () => {
+    const { sessionData } = get();
+    try {
+      Object.entries(sessionData).forEach(([key, value]) => {
+        if (value !== null) {
+          localStorage.setItem(key, value);
+        } else {
+          localStorage.removeItem(key);
+        }
+      });
+      logger.debug('Session data saved to localStorage', 'RoomStore');
+    } catch (error) {
+      logger.error(`Failed to save session data: ${error}`, 'RoomStore');
+    }
+  },
+
+  loadSessionFromStorage: () => {
+    try {
+      const sessionData = {
+        lastPlayerId: localStorage.getItem('lastPlayerId'),
+        lastRoomId: localStorage.getItem('lastRoomId'),
+        lastPlayerName: localStorage.getItem('lastPlayerName'),
+        lastServerUrl: localStorage.getItem('lastServerUrl'),
+      };
+      
+      set({ sessionData });
+      logger.debug('Session data loaded from localStorage', 'RoomStore');
+    } catch (error) {
+      logger.error(`Failed to load session data: ${error}`, 'RoomStore');
+    }
+  },
+
+  clearSession: () => {
+    const sessionKeys = ['lastPlayerId', 'lastRoomId', 'lastPlayerName', 'lastServerUrl'];
+    try {
+      sessionKeys.forEach(key => localStorage.removeItem(key));
+      set({
+        sessionData: {
+          lastPlayerId: null,
+          lastRoomId: null,
+          lastPlayerName: null,
+          lastServerUrl: null,
+        }
+      });
+      logger.debug('Session data cleared', 'RoomStore');
+    } catch (error) {
+      logger.error(`Failed to clear session data: ${error}`, 'RoomStore');
+    }
   },
 
   // Utilidades

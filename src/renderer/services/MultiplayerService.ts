@@ -62,6 +62,47 @@ export class MultiplayerService {
     }
   }
 
+  // Reconexión manual con datos de sesión
+  public async reconnectWithSession(roomId: string, playerName: string): Promise<any> {
+    if (!this.gameClient) {
+      throw new Error('No game client available for reconnection');
+    }
+
+    try {
+      // Intentar unirse a la sala existente
+      const roomData = await this.gameClient.joinRoom({
+        roomId,
+        playerName
+      });
+      
+      logger.info(`Reconnected to room: ${roomData.name}`, 'MultiplayerService');
+      this.emit('roomReconnected', roomData);
+      
+      return roomData;
+    } catch (error) {
+      logger.error(`Failed to reconnect to session: ${error}`, 'MultiplayerService');
+      throw error;
+    }
+  }
+
+  // Obtener estado de reconexión
+  public getReconnectionInfo() {
+    if (!this.gameClient) {
+      return {
+        isReconnecting: false,
+        attempts: 0,
+        maxAttempts: 0
+      };
+    }
+    
+    // Usar la información del estado de conexión del GameClient
+    return {
+      isReconnecting: this.gameClient.getConnectionState().status === 'connecting',
+      attempts: this.gameClient.getConnectionState().reconnectAttempts || 0,
+      maxAttempts: 3 // Valor por defecto basado en la configuración
+    };
+  }
+
   public async disconnect(): Promise<void> {
     if (this.gameClient) {
       this.gameClient.disconnect();

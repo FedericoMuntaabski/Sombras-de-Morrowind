@@ -17,7 +17,7 @@ const WaitingRoomScreen: React.FC = () => {
   } = useRoomStore();
   
   // Type assertion to make sure TypeScript understands the full type
-  const status: 'disconnected' | 'connecting' | 'connected' | 'error' = connectionStatus;
+  const status: 'disconnected' | 'connecting' | 'connected' | 'error' | 'reconnecting' = connectionStatus;
   
   const { 
     characterPresets,

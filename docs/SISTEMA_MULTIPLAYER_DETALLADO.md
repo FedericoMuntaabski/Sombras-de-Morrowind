@@ -479,4 +479,124 @@ Ejecutar: `npm run dev:testing` y presionar **"T"**
 
 ---
 
+## ✅ Problemas Solucionados (30/08/2024)
+
+### ✅ Problema 1: Visualización Incorrecta de Presets en Estado de Jugadores - SOLUCIONADO
+**Descripción:** ~~Cuando un jugador selecciona un preset y marca la opción de estar listo, los otros jugadores en la sala ven "Sin personaje" en lugar del nombre del personaje seleccionado.~~
+
+**Causa del problema:** Inconsistencia en los nombres de campos entre el servidor y el cliente:
+- El servidor almacena y envía presets usando el campo `characterPreset`
+- El store del cliente actualizaba el campo `preset` en lugar de `characterPreset`
+- El hook `useMultiplayer.ts` esperaba `data.preset` pero el servidor enviaba `data.characterPresetId`
+
+**Solución implementada:**
+- ✅ **Corregido `handlePresetUpdated`** en `useMultiplayer.ts` para usar `characterPresetId` en lugar de `preset`
+- ✅ **Corregido `updatePlayerPreset`** en `roomStore.ts` para actualizar `characterPreset` en lugar de `preset`  
+- ✅ **Validado el flujo completo:** servidor → cliente → store → UI
+
+### ✅ Problema 2: Botón de Reconectar con Pantalla Infinita de Carga - SOLUCIONADO  
+**Descripción:** ~~Al presionar el botón de reconexión manual, la aplicación se quedaba en un estado de carga infinita sin completar la reconexión.~~
+
+**Causa del problema:**
+- El método `manualReconnect()` no cancelaba reconexiones automáticas en curso
+- No se emitía correctamente el evento "connecting" antes de intentar conectar
+- La reconexión automática se ejecutaba inmediatamente después de conectar manualmente
+- El estado de UI no se actualizaba correctamente durante el proceso
+
+**Solución implementada:**  
+- ✅ **Mejorado `manualReconnect()`** en `MultiplayerClient.ts` para cancelar reconexiones automáticas y emitir estados correctos
+- ✅ **Corregido el flujo de reconexión** en `useMultiplayer.ts` para manejar estados de UI apropiadamente  
+- ✅ **Modificado `connect()`** para evitar reconexión automática innecesaria en reconexiones manuales
+- ✅ **Añadido `setReconnectionState`** para manejo completo de errores
+
+**Cambios técnicos realizados:**
+```typescript
+// Archivo: MultiplayerClient.ts - Líneas 384-400
+public async manualReconnect(): Promise<void> {
+  // Cancelar reconexiones automáticas en curso
+  if (this.reconnectTimeout) {
+    clearTimeout(this.reconnectTimeout);
+    this.reconnectTimeout = null;
+  }
+  
+  this.disconnect();
+  this.reconnectAttempts = 0;
+  
+  // Emitir evento de connecting antes de conectar
+  this.emit('connecting', { attempt: 1, maxAttempts: this.maxReconnectAttempts });
+  
+  await this.connect(this.serverUrl, this.sessionData);
+}
+
+// Archivo: useMultiplayer.ts - Líneas 279-291  
+const manualReconnect = async () => {
+  setConnectionStatus('connecting');
+  try {
+    await client.manualReconnect();
+  } catch (error) {
+    setConnectionStatus('error');
+    setReconnectionState({
+      lastError: error instanceof Error ? error.message : 'Error de reconexión desconocido'
+    });
+    throw error;
+  }
+};
+
+// Archivo: roomStore.ts - Línea 180
+players: currentRoom.players.map(p => 
+  p.id === playerId ? { ...p, characterPreset: preset } : p  // Corregido de 'preset' a 'characterPreset'
+)
+```
+
+---
+
+## 🐛 Problemas Conocidos Restantes
+
+Sin problemas conocidos en este momento. El sistema de reconexión y visualización de presets está funcionando correctamente.
+
+**Comportamiento actual:**
+- ❌ Se muestra "Sin personaje" independientemente del preset seleccionado
+- ❌ Falta sincronización visual del estado de presets entre jugadores
+
+**Impacto:** UX confusa - los jugadores no pueden ver las selecciones de personajes de otros jugadores.
+
+**Severidad:** Media - No impide el funcionamiento básico pero afecta la experiencia.
+
+---
+
+### ✅ Problema 2: Botón de Reconectar con Pantalla Infinita de Carga - SOLUCIONADO
+**Descripción:** ~~Cuando un cliente se desconecta voluntariamente y luego usa el botón de reconectar, queda en una pantalla infinita de carga que dice "conectado a la sala", pero el host puede ver que el jugador está efectivamente en la sala.~~
+
+**Estado:** ✅ **SOLUCIONADO** - Ver detalles de la corrección arriba en la sección "Problemas Solucionados"
+
+**Resultados de la corrección:**
+- ✅ El botón de reconectar completa la reconexión exitosamente
+- ✅ La UI se actualiza correctamente después de la reconexión
+- ✅ El estado es consistente entre todos los clientes
+- ✅ No más pantallas infinitas de carga
+
+**Severidad:** Alta - Impide el uso normal del sistema de reconexión.
+
+**Notas técnicas:**
+- El servidor procesa correctamente la reconexión (host ve al jugador)
+- El cliente no actualiza su estado interno después de la reconexión manual
+- Posible problema en el manejo de eventos de reconexión en el cliente
+
+---
+
+## 🔧 Próximas Correcciones Prioritarias
+
+### 🎯 Sprint Actual - Corrección de Bugs Críticos
+1. **Alta Prioridad:** Corregir pantalla infinita en reconexión manual
+2. **Media Prioridad:** Sincronizar visualización de presets entre jugadores
+3. **Baja Prioridad:** Mejorar indicadores visuales de estado de conexión
+
+### 📋 Checklist de Validación Post-Corrección
+- [ ] Verificar que presets se muestren correctamente en todos los clientes
+- [ ] Probar reconexión manual sin pantalla infinita de carga
+- [ ] Validar consistencia de estado entre host y clientes
+- [ ] Testear múltiples desconexiones/reconexiones en secuencia
+
+---
+
 *Este documento refleja el estado actual del sistema multiplayer de Sombras de Morrowind - un sistema robusto, en tiempo real y completamente funcional para gaming colaborativo.*

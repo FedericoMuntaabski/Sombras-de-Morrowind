@@ -54,6 +54,7 @@ export class GameClient {
       this.ws.onmessage = (event) => {
         try {
           const gameEvent: GameEvent = JSON.parse(event.data);
+          console.log('[Client] Received event:', gameEvent.type, gameEvent.data);
           this.handleGameEvent(gameEvent);
         } catch (error) {
           console.error('[Client] Error parsing message:', error);

@@ -61,9 +61,29 @@ const JoinRoomScreen: React.FC = () => {
         if (response.ok) {
           const rooms = await response.json();
           if (rooms && rooms.length > 0) {
-            // Unirse a la primera sala disponible
+            // Actualizar las salas disponibles en el store
+            const { joinRoom, setServerUrl } = useRoomStore.getState();
+            useRoomStore.setState({ 
+              availableRooms: rooms.map((room: any) => ({
+                id: room.id,
+                name: room.name,
+                host: 'Host',
+                maxPlayers: room.maxPlayers,
+                currentPlayers: room.players || 0,
+                hasPassword: room.difficulty === 'hard', // Temporal
+                isPublic: !room.isPrivate,
+                status: room.status || 'waiting',
+                createdAt: new Date()
+              }))
+            });
+            
+            // Unirse a la primera sala disponible usando roomStore
             const firstRoom = rooms[0];
-            await multiplayerService.joinRoom(firstRoom.id, playerName);
+            
+            // Establecer la URL del servidor en el store
+            setServerUrl(serverUrl);
+            
+            await joinRoom(firstRoom.id);
             logger.info(`Successfully joined room: ${firstRoom.name}`, 'JoinRoomScreen');
           } else {
             logger.warn('No rooms available on server', 'JoinRoomScreen');

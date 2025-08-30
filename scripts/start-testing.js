@@ -253,9 +253,10 @@ async function startTestingEnvironment() {
     processes.forEach(({ name, process }) => {
       process.on('close', (code) => {
         log(`\n⚠️  ${name} cerrado (código: ${code})`, colors.yellow);
-        if (name === 'Servidor') {
-          log('🚨 Servidor cerrado - cerrando todo el entorno...', colors.red);
-          cleanup();
+        if (name === 'Servidor' && code !== 0) {
+          log('🚨 Servidor cerrado inesperadamente - mantener otros procesos activos...', colors.red);
+          log('💡 Puedes reiniciar el servidor manualmente con: npm run host', colors.cyan);
+          // No hacer cleanup automático para permitir debugging
         }
       });
     });

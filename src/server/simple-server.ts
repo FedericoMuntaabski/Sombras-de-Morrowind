@@ -9,7 +9,7 @@ config();
 // Configuración básica
 const serverConfig = {
   port: parseInt(process.env.PORT || '3000'),
-  host: process.env.HOST || 'localhost'
+  host: process.env.HOST || '0.0.0.0' // Escuchar en todas las interfaces de red
 };
 
 // Crear aplicación Express

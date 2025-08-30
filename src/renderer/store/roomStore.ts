@@ -42,11 +42,17 @@ interface RoomStore {
   isConnected: boolean;
   connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
   
+  // Estado del servidor
+  serverUrl: string | null;
+  
   // Acciones para salas
   fetchAvailableRooms: () => Promise<void>;
   createRoom: (roomData: CreateRoomData) => Promise<string>;
   joinRoom: (roomId: string, password?: string) => Promise<void>;
   leaveRoom: () => void;
+  
+  // Configuración del servidor
+  setServerUrl: (url: string) => void;
   
   // Acciones para jugadores
   setPlayerName: (name: string) => void;
@@ -70,6 +76,7 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
   playerName: '',
   isConnected: false,
   connectionStatus: 'disconnected',
+  serverUrl: null,
 
   // Implementación de acciones
   fetchAvailableRooms: async () => {
@@ -160,7 +167,7 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
         maxPlayers: roomData.maxPlayers,
         gameMode: GameMode.COOPERATIVE, // Default para testing
         difficulty: GameDifficulty.MEDIUM, // Default para testing
-        isPrivate: !roomData.isPublic
+        isPrivate: !(roomData.isPublic ?? true) // Por defecto salas públicas
       }, get().playerName || 'Host');
       
       const newRoom: Room = {
@@ -205,54 +212,74 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
     try {
       logger.info(`Joining room: ${roomId}`, 'RoomStore');
       
-      // TODO: Implementar unión real a sala
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const multiplayerService = MultiplayerService.getInstance();
+      const playerName = get().playerName || 'Player';
       
-      const room = get().availableRooms.find(r => r.id === roomId);
+      // Primero obtener información de la sala desde availableRooms o el servidor
+      let room = get().availableRooms.find(r => r.id === roomId);
+      
+      // Si no tenemos la info localmente, intentar obtenerla del servidor
       if (!room) {
-        throw new Error('Room not found');
+        const currentServerUrl = get().serverUrl;
+        if (currentServerUrl) {
+          try {
+            // Obtener información de la sala específica del servidor
+            const roomResponse = await fetch(`${currentServerUrl}/api/rooms/${roomId}`);
+            if (roomResponse.ok) {
+              const roomData = await roomResponse.json();
+              room = {
+                id: roomData.id,
+                name: roomData.name,
+                host: roomData.host || 'Host',
+                maxPlayers: roomData.maxPlayers,
+                currentPlayers: roomData.players?.length || 0,
+                hasPassword: roomData.isPrivate,
+                isPublic: !roomData.isPrivate,
+                status: roomData.status === 'waiting' ? 'waiting' : 'playing',
+                createdAt: new Date(roomData.createdAt)
+              };
+            }
+          } catch (error) {
+            logger.warn(`Could not fetch room info from server: ${error}`, 'RoomStore');
+          }
+        }
       }
       
-      if (room.hasPassword && !password) {
-        throw new Error('Password required');
+      // Si aún no tenemos info, crear una básica
+      if (!room) {
+        room = {
+          id: roomId,
+          name: 'Sala Desconocida',
+          host: 'Host',
+          maxPlayers: 4,
+          currentPlayers: 1,
+          hasPassword: !!password,
+          isPublic: true,
+          status: 'waiting',
+          createdAt: new Date()
+        };
       }
       
-      if (room.currentPlayers >= room.maxPlayers) {
-        throw new Error('Room is full');
-      }
-      
-      const updatedRoom: Room = {
-        ...room,
-        currentPlayers: room.currentPlayers + 1
-      };
+      // Unirse a la sala usando MultiplayerService
+      await multiplayerService.joinRoom(roomId, playerName, password);
       
       const newPlayer: Player = {
         id: Date.now().toString(),
-        name: get().playerName || 'Player',
+        name: playerName,
         isHost: false,
         isReady: false,
         joinedAt: new Date()
       };
       
-      // Simular otros jugadores ya en la sala
-      const existingPlayers: Player[] = [
-        {
-          id: '1',
-          name: room.host,
-          isHost: true,
-          isReady: true,
-          joinedAt: new Date(Date.now() - 300000)
-        }
-      ];
-      
+      // Establecer estado inicial con la información de la sala real
       set({
-        currentRoom: updatedRoom,
-        players: [...existingPlayers, newPlayer],
+        currentRoom: room,
+        players: [newPlayer],
         isConnected: true,
         connectionStatus: 'connected'
       });
       
-      logger.info(`Successfully joined room: ${roomId}`, 'RoomStore');
+      logger.info(`Successfully joined room: ${roomId} (${room.name})`, 'RoomStore');
     } catch (error) {
       logger.error(`Failed to join room: ${error}`, 'RoomStore');
       set({ connectionStatus: 'error' });
@@ -274,6 +301,11 @@ export const useRoomStore = create<RoomStore>((set, get) => ({
   setPlayerName: (name: string) => {
     set({ playerName: name });
     logger.debug(`Player name set to: ${name}`, 'RoomStore');
+  },
+
+  setServerUrl: (url: string) => {
+    set({ serverUrl: url });
+    logger.debug(`Server URL set to: ${url}`, 'RoomStore');
   },
 
   setPlayerReady: (isReady: boolean) => {

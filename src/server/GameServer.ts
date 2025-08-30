@@ -84,7 +84,8 @@ export class GameServer {
 
     // Listar salas disponibles
     this.app.get('/api/rooms', (_req, res) => {
-      const publicRooms = Array.from(this.rooms.values())
+      const allRooms = Array.from(this.rooms.values());
+      const publicRooms = allRooms
         .filter(room => !room.isPrivate && room.status === RoomStatus.WAITING)
         .map(room => ({
           id: room.id,
@@ -94,6 +95,12 @@ export class GameServer {
           gameMode: room.gameMode,
           difficulty: room.difficulty
         }));
+      
+      console.log(`[Server] Rooms request - Total: ${allRooms.length}, Public: ${publicRooms.length}`);
+      allRooms.forEach(room => {
+        console.log(`[Server] Room "${room.name}" - Private: ${room.isPrivate}, Status: ${room.status}`);
+      });
+      
       res.json(publicRooms);
     });
 
@@ -481,12 +488,18 @@ export class GameServer {
     // Enviar notificación de chat
     this.sendChatNotification(roomId, `${playerName} se ha unido a la sala`, 'join');
 
+    // IMPORTANTE: Enviar actualización del lobby a todos los jugadores
+    this.sendLobbyUpdate(roomId);
+
     console.log(`[Server] Jugador ${playerName} se unió a la sala ${room.name}`);
     return { success: true, playerId, roomId };
   }
 
   private handleCreateRoom(ws: WebSocket, data: any): { success: boolean; playerId?: string; roomId?: string } {
-    const { roomName, playerName, maxPlayers, gameMode, difficulty, isPrivate } = data;
+    // Extraer datos - el cliente envía 'name' no 'roomName'
+    const { name: roomName, playerName, maxPlayers, gameMode, difficulty, isPrivate } = data;
+    
+    console.log(`[Server] Creando sala: "${roomName}" por jugador: "${playerName}"`);
     
     const roomId = this.createRoom(roomName, maxPlayers, gameMode, difficulty, isPrivate);
     const joinResult = this.handleJoinRoom(ws, { roomId, playerName });
@@ -601,9 +614,20 @@ export class GameServer {
 
   private handleChatMessage(playerId: string, roomId: string, messageData: any): void {
     const player = this.players.get(playerId);
-    if (!player) return;
+    if (!player) {
+      console.log(`[Chat] ERROR: Player ${playerId} not found`);
+      return;
+    }
 
-    this.broadcastToRoom(roomId, {
+    const room = this.rooms.get(roomId);
+    if (!room) {
+      console.log(`[Chat] ERROR: Room ${roomId} not found`);
+      return;
+    }
+
+    console.log(`[Chat] Player ${player.name} in room ${roomId} (${room.players.length} players): ${messageData.message}`);
+
+    const chatEvent = {
       type: GameEventType.CHAT_MESSAGE,
       timestamp: Date.now(),
       data: {
@@ -611,7 +635,13 @@ export class GameServer {
         playerName: player.name,
         message: messageData.message
       }
-    });
+    };
+
+    console.log(`[Chat] Broadcasting to room ${roomId}:`, JSON.stringify(chatEvent));
+    
+    this.broadcastToRoom(roomId, chatEvent);
+    
+    console.log(`[Chat] Message broadcasted to ${room.players.length} players`);
   }
 
   private handlePresetSelect(playerId: string, roomId: string, presetData: any): void {
@@ -839,15 +869,27 @@ export class GameServer {
 
   private broadcastToRoom(roomId: string, event: GameEvent, excludePlayerId?: string): void {
     const room = this.rooms.get(roomId);
-    if (!room) return;
+    if (!room) {
+      console.log(`[Broadcast] ERROR: Room ${roomId} not found`);
+      return;
+    }
 
+    console.log(`[Broadcast] Broadcasting to room ${roomId}, event: ${event.type}, players: ${room.players.length}`);
+    
+    let sentCount = 0;
     room.players
       .filter((player: Player) => player.id !== excludePlayerId)
       .forEach((player: Player) => {
         if (player.ws.readyState === WebSocket.OPEN) {
+          console.log(`[Broadcast] Sending to player ${player.name} (${player.id})`);
           this.sendEvent(player.ws, event);
+          sentCount++;
+        } else {
+          console.log(`[Broadcast] Skipping player ${player.name} (${player.id}) - WebSocket not open (state: ${player.ws.readyState})`);
         }
       });
+    
+    console.log(`[Broadcast] Sent to ${sentCount} players out of ${room.players.length} total`);
   }
 
   private sendEvent(ws: WebSocket, event: GameEvent): void {
@@ -862,10 +904,30 @@ export class GameServer {
   }
 
   public start(): Promise<void> {
-    return new Promise((resolve) => {
-      this.server.listen(this.config.port, this.config.host, () => {
-        console.log(`[Server] Servidor iniciado en http://${this.config.host}:${this.config.port}`);
-        console.log(`[Server] WebSocket disponible en ws://${this.config.host}:${this.config.port}/ws`);
+    return new Promise((resolve, reject) => {
+      // Para aceptar conexiones de cualquier IP, usar 0.0.0.0
+      // Para solo localhost, usar 127.0.0.1
+      let host = this.config.host;
+      if (host === 'localhost') {
+        host = '0.0.0.0'; // Cambiar localhost a 0.0.0.0 para permitir conexiones externas
+      }
+      
+      console.log(`[Server] Iniciando servidor en ${host}:${this.config.port}...`);
+      
+      this.server.listen(this.config.port, host, (error?: Error) => {
+        if (error) {
+          console.error(`[Server] Error al iniciar servidor: ${error.message}`);
+          reject(error);
+          return;
+        }
+
+        const addr = this.server.address();
+        
+        console.log(`[Server] Servidor iniciado en http://${host}:${this.config.port}`);
+        console.log(`[Server] WebSocket disponible en ws://${host}:${this.config.port}/ws`);
+        console.log(`[Server] Servidor escuchando en IPv4 - host: ${host}`);
+        console.log(`[Server] Dirección del servidor:`, addr);
+        console.log(`[Server] ✅ El servidor acepta conexiones de cualquier IP (localhost, LAN, Internet)`);
         
         // Configurar limpieza periódica de salas inactivas
         setInterval(() => {

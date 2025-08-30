@@ -11,6 +11,7 @@
     "dev": "cross-env NODE_ENV=development webpack serve --config webpack.renderer.config.js",
     "dev:combined": "node scripts/start-combined.js",
     "dev:testing": "node scripts/start-testing.js",
+    "dev:debug": "node scripts/start-debug.js",
     "dev:main": "cross-env NODE_ENV=development webpack --config webpack.main.config.js --watch",
     "dev:renderer": "cross-env NODE_ENV=development webpack serve --config webpack.renderer.config.js",
     "dev:server": "cross-env NODE_ENV=development ts-node src/server/simple-server.ts",

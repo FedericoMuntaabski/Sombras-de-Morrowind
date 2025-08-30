@@ -234,6 +234,7 @@ export class MultiplayerService {
 
     // Chat
     this.gameClient.on(GameEventType.CHAT_MESSAGE, (data) => {
+      console.log('[MultiplayerService] Received chat message:', data);
       this.addChatMessage(data.playerName, data.message);
       this.emit('chatMessage', data);
     });

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAppStore } from '@renderer/store/appStore';
 import { useRoomStore } from '@renderer/store/roomStore';
 import { useCharacterStore } from '@renderer/store/characterStore';
+import { MultiplayerService } from '@renderer/services/MultiplayerService';
 import { logger } from '@shared/utils/logger';
 import MedievalButton from '@renderer/components/ui/MedievalButton';
 import { NetworkUtils } from '@renderer/utils/NetworkUtils';
@@ -54,17 +55,116 @@ const WaitingRoomScreen: React.FC = () => {
     loadNetworkInfo();
   }, [isHost]);
 
-  // Simular mensajes de chat para demo
+  // Configurar listeners del MultiplayerService para sincronización en tiempo real
   useEffect(() => {
-    setChatMessages([
-      {
-        id: '1',
-        type: 'notification',
-        content: `Estás en la sala: ${currentRoom?.name || 'Sala de ejemplo'}`,
-        timestamp: new Date()
+    const multiplayerService = MultiplayerService.getInstance();
+    
+    // Listener para actualizaciones del lobby
+    const handleLobbyUpdate = (lobbyState: any) => {
+      logger.info(`[WaitingRoom] Lobby update received`, 'WaitingRoomScreen');
+      console.log('[WaitingRoom] Lobby data received:', lobbyState);
+      
+      if (lobbyState && lobbyState.players) {
+        // Actualizar el estado de los jugadores
+        useRoomStore.setState({
+          players: lobbyState.players.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            isHost: p.isHost || false,
+            isReady: p.isReady || false,
+            joinedAt: new Date(p.joinedAt || Date.now())
+          }))
+        });
+
+        // Actualizar contador de jugadores en currentRoom
+        const roomStore = useRoomStore.getState();
+        if (roomStore.currentRoom) {
+          useRoomStore.setState({
+            currentRoom: {
+              ...roomStore.currentRoom,
+              currentPlayers: lobbyState.players.length
+            }
+          });
+        }
+
+        logger.info(`[WaitingRoom] Updated players: ${lobbyState.players.length}`, 'WaitingRoomScreen');
       }
-    ]);
-  }, [currentRoom]);
+    };
+    
+    // Listener para mensajes de chat
+    const handleChatMessage = (data: any) => {
+      logger.info(`[WaitingRoom] Chat message received from ${data.playerName}: ${data.message}`, 'WaitingRoomScreen');
+      
+      const newMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'message',
+        playerName: data.playerName,
+        content: data.message,
+        timestamp: new Date()
+      };
+      
+      setChatMessages(prev => [...prev, newMessage]);
+    };
+    
+    // Listener para notificaciones de chat
+    const handleChatNotification = (data: any) => {
+      logger.info(`[WaitingRoom] Chat notification: ${data.message}`, 'WaitingRoomScreen');
+      
+      const newMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'notification',
+        content: data.message,
+        timestamp: new Date()
+      };
+      
+      setChatMessages(prev => [...prev, newMessage]);
+    };
+
+    // Listener para cambios de estado "ready"
+    const handlePlayerReadyChanged = (data: any) => {
+      logger.info(`[WaitingRoom] Player ready changed: ${data.playerId} - ${data.isReady}`, 'WaitingRoomScreen');
+      
+      // Actualizar el estado del jugador específico
+      const roomStore = useRoomStore.getState();
+      const updatedPlayers = roomStore.players.map(player => 
+        player.id === data.playerId 
+          ? { ...player, isReady: data.isReady }
+          : player
+      );
+      
+      useRoomStore.setState({
+        players: updatedPlayers
+      });
+    };
+    
+    // Configurar listeners
+    multiplayerService.on('lobbyUpdate', handleLobbyUpdate);
+    multiplayerService.on('chatMessage', handleChatMessage);
+    multiplayerService.on('chatNotification', handleChatNotification);
+    multiplayerService.on('playerReadyChanged', handlePlayerReadyChanged);
+    
+    // Cleanup al desmontar
+    return () => {
+      multiplayerService.off('lobbyUpdate', handleLobbyUpdate);
+      multiplayerService.off('chatMessage', handleChatMessage);
+      multiplayerService.off('chatNotification', handleChatNotification);
+      multiplayerService.off('playerReadyChanged', handlePlayerReadyChanged);
+    };
+  }, []);
+
+  // Simular mensajes de chat para demo (solo si no hay mensajes)
+  useEffect(() => {
+    if (chatMessages.length === 0) {
+      setChatMessages([
+        {
+          id: '1',
+          type: 'notification',
+          content: `Estás en la sala: ${currentRoom?.name || 'Sala de ejemplo'}`,
+          timestamp: new Date()
+        }
+      ]);
+    }
+  }, [currentRoom, chatMessages.length]);
 
   const handleLeaveRoom = useCallback(() => {
     logger.info('Leaving waiting room', 'WaitingRoomScreen');
@@ -74,17 +174,19 @@ const WaitingRoomScreen: React.FC = () => {
 
   const handleToggleReady = useCallback(() => {
     const newReadyState = !currentPlayer?.isReady;
+    
+    // Actualizar estado localmente primero
     setPlayerReady(newReadyState);
     
-    // Simular mensaje de chat
-    const message: ChatMessage = {
-      id: Date.now().toString(),
-      type: 'notification',
-      content: `${playerName} ${newReadyState ? 'está listo' : 'no está listo'}`,
-      timestamp: new Date()
-    };
-    setChatMessages(prev => [...prev, message]);
-  }, [currentPlayer?.isReady, setPlayerReady, playerName]);
+    // Enviar actualización al servidor usando MultiplayerService
+    const multiplayerService = MultiplayerService.getInstance();
+    try {
+      multiplayerService.setPlayerReady(newReadyState);
+      logger.info(`[WaitingRoom] Player ready state changed to: ${newReadyState}`, 'WaitingRoomScreen');
+    } catch (error) {
+      logger.error(`[WaitingRoom] Failed to update ready state: ${error}`, 'WaitingRoomScreen');
+    }
+  }, [currentPlayer?.isReady, setPlayerReady]);
 
   const handleStartGame = useCallback(() => {
     if (!allPlayersReady) {
@@ -105,16 +207,26 @@ const WaitingRoomScreen: React.FC = () => {
   const handleSendMessage = useCallback(() => {
     if (!newMessage.trim()) return;
 
-    const message: ChatMessage = {
-      id: Date.now().toString(),
-      type: 'message',
-      playerName: playerName,
-      content: newMessage.trim(),
-      timestamp: new Date()
-    };
-
-    setChatMessages(prev => [...prev, message]);
-    setNewMessage('');
+    // Enviar mensaje usando MultiplayerService
+    const multiplayerService = MultiplayerService.getInstance();
+    try {
+      multiplayerService.sendChatMessage(newMessage.trim());
+      logger.info(`[WaitingRoom] Sending chat message: ${newMessage.trim()}`, 'WaitingRoomScreen');
+      setNewMessage('');
+    } catch (error) {
+      logger.error(`[WaitingRoom] Failed to send chat message: ${error}`, 'WaitingRoomScreen');
+      
+      // Fallback: agregar mensaje localmente si falla el envío
+      const message: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'message',
+        playerName: playerName,
+        content: `[Local] ${newMessage.trim()}`,
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, message]);
+      setNewMessage('');
+    }
   }, [newMessage, playerName]);
 
   const handleCopyConnectionInfo = useCallback(async () => {

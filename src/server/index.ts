@@ -4,7 +4,7 @@ import { ServerConfig } from '../shared/types/server';
 // Configuración del servidor
 const config: ServerConfig = {
   port: parseInt(process.env.PORT || '8080'),
-  host: process.env.HOST || 'localhost',
+  host: process.env.HOST || '0.0.0.0', // Escuchar en todas las interfaces de red
   serverId: 'sombras-morrowind-server',
   version: '1.0.0',
   maxRooms: 100,

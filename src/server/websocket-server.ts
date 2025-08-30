@@ -9,7 +9,7 @@ config();
 // Configuración del servidor
 const serverConfig: ServerConfig = {
   port: parseInt(process.env.PORT || '3000'),
-  host: process.env.HOST || 'localhost',
+  host: process.env.HOST || '0.0.0.0', // Escuchar en todas las interfaces IPv4
   serverId: process.env.SERVER_ID || 'sombras-morrowind-server',
   version: process.env.SERVER_VERSION || '1.0.0',
   maxRooms: parseInt(process.env.MAX_ROOMS || '50'),

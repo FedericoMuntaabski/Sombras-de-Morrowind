@@ -303,7 +303,7 @@ export class MultiplayerClient {
           data: {}
         });
       }
-    }, 25000); // Enviar cada 25 segundos (antes del timeout de 30s del servidor)
+    }, 20000); // Enviar cada 20 segundos (antes del timeout de 30s del servidor)
   }
 
   private stopHeartbeat(): void {

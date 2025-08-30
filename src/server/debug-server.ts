@@ -3,9 +3,13 @@ import * as http from 'http';
 import * as path from 'path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { config } from 'dotenv';
+import { SystemLogger } from '@shared/utils/SystemLogger';
 
 // Cargar variables de entorno
 config();
+
+// Logger específico para debug server
+const serverLogger = SystemLogger.create('DebugServer');
 
 // Configuración básica
 const serverConfig = {
@@ -21,13 +25,21 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '../../dist')));
 app.use('/assets', express.static(path.join(__dirname, '../../assets')));
 
-// Tipos básicos
+// Tipos específicos para el servidor
+interface PlayerPreset {
+  name: string;
+  race: string;
+  class: string;
+  attributes: Record<string, number>;
+  skills: Record<string, number>;
+}
+
 interface Player {
   id: string;
   name: string;
   ws: WebSocket;
   isReady: boolean;
-  preset?: any;
+  preset?: PlayerPreset;
 }
 
 interface Room {

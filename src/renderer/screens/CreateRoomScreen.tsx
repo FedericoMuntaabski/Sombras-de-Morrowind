@@ -1,13 +1,18 @@
 import React, { useState, useCallback } from 'react';
 import { useAppStore } from '@renderer/store/appStore';
 import { useRoomStore } from '@renderer/store/roomStore';
+import { useMultiplayerSync, useMultiplayerActions } from '@renderer/hooks/useMultiplayer';
 import { logger } from '@shared/utils/logger';
 import MedievalButton from '@renderer/components/ui/MedievalButton';
 import './CreateRoomScreen.scss';
 
 const CreateRoomScreen: React.FC = () => {
   const { setCurrentScreen } = useAppStore();
-  const { createRoom, setPlayerName, playerName } = useRoomStore();
+  const { setPlayerName, playerName } = useRoomStore();
+  const { createRoom } = useMultiplayerActions();
+  
+  // Initialize multiplayer sync
+  useMultiplayerSync();
   
   const [roomName, setRoomName] = useState('');
   const [maxPlayers, setMaxPlayers] = useState(4);
@@ -41,13 +46,8 @@ const CreateRoomScreen: React.FC = () => {
     setIsCreating(true);
 
     try {
-      const roomData = {
-        name: roomName.trim(),
-        maxPlayers
-      };
-
-      const roomId = await createRoom(roomData);
-      logger.info(`Room created with ID: ${roomId}`, 'CreateRoomScreen');
+      createRoom(roomName.trim(), maxPlayers);
+      logger.info(`Creating room: ${roomName}`, 'CreateRoomScreen');
       
       // Navegar a la sala de espera
       setCurrentScreen('waiting');

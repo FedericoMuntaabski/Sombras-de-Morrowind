@@ -64,7 +64,16 @@ class Application {
         webSecurity: !isDev, // Desactivar en desarrollo para webpack-dev-server
         sandbox: false, // Necesario para preload script
         nodeIntegrationInWorker: false,
-        nodeIntegrationInSubFrames: false
+        nodeIntegrationInSubFrames: false,
+        // Configuraciones para evitar errores de cache
+        partition: `session-${Date.now()}`, // Sesión única para evitar conflictos
+        additionalArguments: [
+          '--disable-web-security',
+          '--disable-gpu-cache',
+          '--disable-application-cache',
+          '--disable-background-timer-throttling',
+          '--disable-renderer-backgrounding'
+        ]
       },
     });
 

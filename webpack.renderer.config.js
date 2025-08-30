@@ -9,8 +9,24 @@ module.exports = {
   externals: {}, // Forzar que no haya externals
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'renderer.js',
+    filename: process.env.NODE_ENV === 'production' ? '[name].[contenthash].js' : 'renderer.js',
     publicPath: process.env.NODE_ENV === 'production' ? './' : '/',
+    clean: true, // Limpiar dist en cada build
+  },
+  // Optimizaciones de performance
+  optimization: {
+    splitChunks: {
+      chunks: 'all',
+      cacheGroups: {
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          chunks: 'all',
+        },
+      },
+    },
+    usedExports: true,
+    sideEffects: false,
   },
   // NO marcar nada como external para permitir que webpack maneje todo internamente
   module: {
@@ -18,7 +34,7 @@ module.exports = {
       {
         test: /\.(ts|tsx)$/,
         use: 'ts-loader',
-        exclude: [/node_modules/, /\.test\.ts$/, /src\/test\//],
+        exclude: [/node_modules/, /\.test\.ts$/, /src\/test\//, /src\/server\/legacy/, /src\/server\/debug-server\.ts$/, /src\/main\//],
       },
       {
         test: /\.css$/,

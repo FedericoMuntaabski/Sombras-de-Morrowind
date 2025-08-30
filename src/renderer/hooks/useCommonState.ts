@@ -51,7 +51,7 @@ export const useFormState = <T extends Record<string, any>>(options: UseFormStat
   const [errors, setErrors] = useState<Partial<Record<keyof T, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const updateField = useCallback((field: keyof T, value: any) => {
+  const updateField = useCallback((field: keyof T, value: T[keyof T]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Limpiar error del campo cuando se actualiza
     if (errors[field]) {

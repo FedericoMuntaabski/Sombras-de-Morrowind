@@ -483,6 +483,12 @@ $success-green: #5c8a3a;
           font-size: 1.3rem;
         }
 
+        .audio-section-centered {
+          display: flex;
+          justify-content: center;
+          width: 100%;
+        }
+
         .setting-item {
           display: flex;
           justify-content: space-between;

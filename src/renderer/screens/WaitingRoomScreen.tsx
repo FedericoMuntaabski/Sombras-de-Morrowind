@@ -5,6 +5,7 @@ import { useCharacterStore } from '@renderer/store/characterStore';
 import { useMultiplayerSync, useMultiplayerActions } from '@renderer/hooks/useMultiplayer';
 import { logger } from '@shared/utils/logger';
 import MedievalButton from '@renderer/components/ui/MedievalButton';
+import AudioControls from '@renderer/components/ui/AudioControls';
 import './WaitingRoomScreen.scss';
 
 const WaitingRoomScreen: React.FC = () => {
@@ -160,12 +161,12 @@ const WaitingRoomScreen: React.FC = () => {
           <div className="players-section">
             <h2>Jugadores Conectados</h2>
             <div className="players-list">
-              {currentRoom.players.map((player) => {
+              {currentRoom.players.map((player, index) => {
                 const selectedCharacter = player.characterPreset ? 
                   getCharacterPresetById(player.characterPreset) : null;
                 
                 return (
-                  <div key={player.id} className="player-item">
+                  <div key={`player-${player.id}-${index}`} className="player-item">
                     <div className="player-info">
                       <div className="player-name">
                         {player.name} {player.id === currentRoom.hostId && '👑'}
@@ -300,24 +301,23 @@ const WaitingRoomScreen: React.FC = () => {
                 disabled={!selectedCharacterPreset}
               />
 
-              {/* Controles de host */}
+              {/* Configuración de audio disponible para todos */}
+              <MedievalButton
+                text="⚙️ Configuración Audio"
+                onClick={() => setShowSettings(true)}
+                variant="secondary"
+                size="medium"
+              />
+
+              {/* Controles exclusivos de host */}
               {isHost && (
-                <>
-                  <MedievalButton
-                    text="🎮 Iniciar Partida"
-                    onClick={handleStartGame}
-                    variant="primary"
-                    size="large"
-                    disabled={!allPlayersReady || currentRoom.players.length < 2}
-                  />
-                  
-                  <MedievalButton
-                    text="⚙️ Configurar Sala"
-                    onClick={() => setShowSettings(true)}
-                    variant="secondary"
-                    size="medium"
-                  />
-                </>
+                <MedievalButton
+                  text="🎮 Iniciar Partida"
+                  onClick={handleStartGame}
+                  variant="primary"
+                  size="large"
+                  disabled={!allPlayersReady || currentRoom.players.length < 2}
+                />
               )}
 
               {/* Salir de la sala */}
@@ -340,36 +340,20 @@ const WaitingRoomScreen: React.FC = () => {
         </div>
 
         {/* Modal de configuración */}
-        {showSettings && isHost && (
+        {showSettings && (
           <div className="settings-modal">
             <div className="settings-content">
-              <h2>Configuración de Sala</h2>
+              <h2>Configuración de Audio</h2>
               
               <div className="settings-section">
-                <h3>Configuración General</h3>
-                <div className="setting-item">
-                  <label>Nombre de la Sala:</label>
-                  <input 
-                    type="text" 
-                    defaultValue={currentRoom.name}
-                    disabled
-                  />
-                </div>
-                <div className="setting-item">
-                  <label>Jugadores Máximos:</label>
-                  <select defaultValue={currentRoom.maxPlayers} disabled>
-                    <option value={2}>2 Jugadores</option>
-                    <option value={3}>3 Jugadores</option>
-                    <option value={4}>4 Jugadores</option>
-                    <option value={5}>5 Jugadores</option>
-                    <option value={6}>6 Jugadores</option>
-                  </select>
+                <div className="audio-section-centered">
+                  <AudioControls />
                 </div>
               </div>
 
               <div className="settings-actions">
                 <MedievalButton
-                  text="Cerrar"
+                  text="Volver a la Sala"
                   onClick={() => setShowSettings(false)}
                   variant="primary"
                   size="medium"

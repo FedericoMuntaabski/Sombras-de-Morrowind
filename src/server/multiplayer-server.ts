@@ -346,12 +346,12 @@ app.get('/api/rooms', (_req, res) => {
   const rooms = serverState.getAvailableRooms().map(room => ({
     id: room.id,
     name: room.name,
-    players: room.players.length,
+    currentPlayers: room.players.length,
     maxPlayers: room.maxPlayers,
     status: room.status
   }));
   
-  res.json({ rooms });
+  res.json(rooms);
 });
 
 // MANEJO DE WEBSOCKETS

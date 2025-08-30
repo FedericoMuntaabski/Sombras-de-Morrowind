@@ -307,14 +307,43 @@ scheduleReconnect() {
 
 ### ⏰ Sistema de Heartbeat
 ```typescript
-// Cliente envía PING cada 30 segundos
-client.sendEvent('PING', { timestamp: Date.now() });
+// MultiplayerClient.ts - Heartbeat automático implementado
+private startHeartbeat(): void {
+  this.heartbeatInterval = setInterval(() => {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.sendEvent({
+        type: 'HEARTBEAT',
+        data: {}
+      });
+    }
+  }, 25000); // Enviar cada 25 segundos (antes del timeout de 30s)
+}
 
-// Servidor responde inmediatamente con PONG
-server.sendEvent('PONG', { timestamp: Date.now() });
+private stopHeartbeat(): void {
+  if (this.heartbeatInterval) {
+    clearInterval(this.heartbeatInterval);
+    this.heartbeatInterval = null;
+  }
+}
 
-// Detecta conexiones zombies y las limpia
+// Servidor responde con HEARTBEAT_ACK
+server.handleHeartbeat(socket) {
+  // Actualiza lastSeen del jugador
+  serverState.updatePlayerHeartbeat(playerId);
+  
+  // Responde al cliente
+  socket.send(JSON.stringify({
+    type: 'HEARTBEAT_ACK',
+    data: { timestamp: Date.now() }
+  }));
+}
 ```
+
+**Beneficios del Sistema:**
+- ✅ **Evita desconexiones automáticas** por timeout del servidor
+- ✅ **Detecta conexiones zombies** y las limpia automáticamente
+- ✅ **Mantiene conexiones estables** durante periodos de inactividad
+- ✅ **Intervalo optimizado** (25s) para prevenir timeouts de 30s
 
 ### 🚨 Manejo de Errores Críticos
 ```typescript
@@ -376,6 +405,30 @@ Ejecutar: `npm run dev:testing` y presionar **"T"**
 4. Probar chat, presets, estados ready
 5. Verificar sincronización en ambas ventanas
 6. Probar desconexión/reconexión
+
+---
+
+## 🆕 Mejoras Recientes Implementadas
+
+### ✅ Configuración de Audio Universal
+**Problema:** Solo el host podía acceder a la configuración de audio en el lobby  
+**Solución:** Movido el botón "⚙️ Configuración Audio" fuera del bloque `isHost`  
+**Beneficio:** Todos los jugadores pueden ajustar volumen de música y efectos de sonido
+
+### ✅ Sistema de Keys Únicas en Lista de Jugadores
+**Problema:** Warning de React "Encountered two children with the same key"  
+**Solución:** Cambiado `key={player.id}` por `key={player-${player.id}-${index}}`  
+**Beneficio:** Eliminación completa de warnings de React y mejor estabilidad
+
+### ✅ Heartbeat Automático en Cliente
+**Problema:** Jugadores se desconectaban automáticamente después de 30 segundos  
+**Solución:** Implementado sistema de heartbeat en `MultiplayerClient.ts`  
+**Beneficio:** Conexiones estables sin desconexiones inesperadas
+
+### ✅ API Endpoints Optimizados
+**Problema:** Formato inconsistente entre cliente y servidor  
+**Solución:** Corregido endpoint `/api/rooms` para retornar array directo  
+**Beneficio:** Mejor compatibilidad y menos errores de parsing
 
 ---
 

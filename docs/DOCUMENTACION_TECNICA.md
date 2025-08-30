@@ -151,6 +151,151 @@ async function killPortProcess(port) {
 
 ---
 
+### 5. 🔊 Configuración de Audio Universal
+
+#### Problema Original:
+```
+Solo el host podía acceder a configuración de audio en el lobby
+```
+
+#### Solución Técnica:
+```typescript
+// WaitingRoomScreen.tsx - Configuración disponible para todos
+{isHost && (
+  <>
+    <MedievalButton
+      text="🎮 Iniciar Partida"
+      onClick={handleStartGame}
+      variant="primary"
+      size="large"
+      disabled={!allPlayersReady || currentRoom.players.length < 2}
+    />
+  </>
+)}
+
+// Configuración de audio disponible para todos los jugadores
+<MedievalButton
+  text="⚙️ Configuración Audio"
+  onClick={() => setShowSettings(true)}
+  variant="secondary"
+  size="medium"
+/>
+```
+
+#### Beneficios:
+- ✅ **Acceso universal** - Todos los jugadores pueden ajustar audio
+- ✅ **Consistencia UI** - Mismo componente AudioControls para todos
+- ✅ **Experiencia mejorada** - Personalización individual del audio
+
+---
+
+### 6. 🔑 Sistema de Keys Únicas en React
+
+#### Problema Original:
+```
+Warning: Encountered two children with the same key, `playerId`
+```
+
+#### Solución Técnica:
+```typescript
+// WaitingRoomScreen.tsx - Keys únicas para lista de jugadores
+{currentRoom.players.map((player, index) => {
+  const selectedCharacter = player.characterPreset ? 
+    getCharacterPresetById(player.characterPreset) : null;
+  
+  return (
+    <div key={`player-${player.id}-${index}`} className="player-item">
+      {/* ... contenido del jugador ... */}
+    </div>
+  );
+})}
+```
+
+#### Beneficios:
+- ✅ **Eliminación de warnings** - No más errores de React
+- ✅ **Estabilidad mejorada** - Componentes se renderizan correctamente
+- ✅ **Performance optimizada** - React puede optimizar re-renders
+
+---
+
+### 7. 💓 Sistema de Heartbeat Automático
+
+#### Problema Original:
+```
+Jugadores se desconectaban automáticamente después de 30 segundos
+```
+
+#### Solución Técnica:
+```typescript
+// MultiplayerClient.ts - Heartbeat automático
+private startHeartbeat(): void {
+  this.heartbeatInterval = setInterval(() => {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.sendEvent({
+        type: 'HEARTBEAT',
+        data: {}
+      });
+    }
+  }, 25000); // 25 segundos (antes del timeout de 30s)
+}
+
+private stopHeartbeat(): void {
+  if (this.heartbeatInterval) {
+    clearInterval(this.heartbeatInterval);
+    this.heartbeatInterval = null;
+  }
+}
+
+// Activación automática al conectar
+this.ws.onopen = () => {
+  this.startHeartbeat(); // Inicia heartbeat
+  this.emit('connected');
+  resolve();
+};
+```
+
+#### Beneficios:
+- ✅ **Conexiones estables** - No hay desconexiones por inactividad
+- ✅ **Detección automática** - Servidor limpia conexiones zombies
+- ✅ **Intervalo optimizado** - 25s previene timeouts de 30s
+
+---
+
+### 8. 🔗 API Endpoints Optimizados
+
+#### Problema Original:
+```
+Cliente esperaba array directo pero servidor retornaba {rooms: array}
+```
+
+#### Solución Técnica:
+```typescript
+// multiplayer-server.ts - Endpoint corregido
+app.get('/api/rooms', (req, res) => {
+  const availableRooms = serverState.getAvailableRooms();
+  
+  // Antes: res.json({ rooms: availableRooms })
+  res.json(availableRooms); // Ahora: array directo
+  
+  // Campo currentPlayers en lugar de players
+  const room = {
+    id: room.id,
+    name: room.name,
+    hostId: room.hostId,
+    currentPlayers: room.players.length, // Antes: players
+    maxPlayers: room.maxPlayers,
+    status: room.status
+  };
+});
+```
+
+#### Beneficios:
+- ✅ **Compatibilidad perfecta** - Cliente/servidor sincronizados
+- ✅ **Menos errores** - No hay parsing de objetos innecesarios
+- ✅ **Performance mejorada** - Menos procesamiento de datos
+
+---
+
 ## 🏗️ Arquitectura Multiplayer
 
 ### Flujo de Conexión:

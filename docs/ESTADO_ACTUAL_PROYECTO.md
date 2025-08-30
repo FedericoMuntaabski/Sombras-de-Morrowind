@@ -57,6 +57,9 @@ npm run build         # Compilar aplicación para producción
 - **✅ Chat en tiempo real** - Mensajes instantáneos en sala de espera
 - **✅ Sistema de "Listo"** - Estados de preparación para iniciar partida
 - **✅ Sistema PING/PONG** - Latencia y conexión estable
+- **✅ Sistema de Heartbeat** - Evita desconexiones automáticas por timeout
+- **✅ Configuración de Audio Universal** - Disponible para todos los jugadores en el lobby
+- **✅ API Endpoints Optimizados** - Formato consistente entre cliente/servidor
 
 ### 🎮 Interfaz de Usuario
 - **✅ Pantallas principales** - Menú, creación, unirse, sala de espera
@@ -64,6 +67,7 @@ npm run build         # Compilar aplicación para producción
 - **✅ Diseño medieval temático** - Estilo coherente con el tema
 - **✅ Audio sistema** - Efectos de sonido y música de fondo
 - **✅ Gestión de personajes** - Creación y manejo de personajes
+- **✅ Lista de Jugadores Estable** - Sin warnings de React sobre keys duplicadas
 
 ### 🔧 Sistema Técnico
 - **✅ TypeScript completo** - 0 errores de compilación
@@ -109,6 +113,22 @@ El script principal `npm run dev:testing` proporciona:
 ### ❌ → ✅ Conexiones Simuladas
 **Antes:** Sistema mock sin funcionalidad real  
 **Solución:** Integración completa con MultiplayerService real
+
+### ❌ → ✅ Configuración de Audio Solo para Host
+**Antes:** Solo el host podía acceder a configuración de audio en el lobby  
+**Solución:** Movido el botón "⚙️ Configuración Audio" fuera del bloque `isHost` para que todos los jugadores puedan acceder
+
+### ❌ → ✅ Keys Duplicadas en Lista de Jugadores
+**Antes:** Warning de React "Encountered two children with the same key"  
+**Solución:** Cambiado `key={player.id}` por `key={player-${player.id}-${index}}` para asegurar unicidad
+
+### ❌ → ✅ Desconexiones Automáticas por Timeout
+**Antes:** Jugadores se desconectaban automáticamente después de 30 segundos  
+**Solución:** Implementado sistema de heartbeat en `MultiplayerClient.ts` que envía pings cada 25 segundos
+
+### ❌ → ✅ API Endpoint Format Mismatch
+**Antes:** Cliente esperaba array directo pero servidor retornaba `{rooms: array}`  
+**Solución:** Corregido endpoint `/api/rooms` para retornar array directo y campo `currentPlayers` en lugar de `players`
 
 ---
 

@@ -18,6 +18,7 @@ export class MultiplayerClient {
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 3;
   private reconnectTimeout: NodeJS.Timeout | null = null;
+  private heartbeatInterval: NodeJS.Timeout | null = null;
   
   // Event listeners
   private eventListeners: Map<string, Function[]> = new Map();
@@ -57,6 +58,7 @@ export class MultiplayerClient {
           logger.info('Connected to multiplayer server', 'MultiplayerClient');
           this.isConnecting = false;
           this.reconnectAttempts = 0;
+          this.startHeartbeat();
           this.emit('connected');
           resolve();
         };
@@ -74,6 +76,7 @@ export class MultiplayerClient {
         this.ws.onclose = (event) => {
           logger.warn(`WebSocket connection closed: ${event.code} - ${event.reason}`, 'MultiplayerClient');
           this.isConnecting = false;
+          this.stopHeartbeat();
           this.emit('disconnected');
           
           // Intentar reconectar automáticamente
@@ -112,6 +115,8 @@ export class MultiplayerClient {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
     }
+
+    this.stopHeartbeat();
 
     if (this.ws) {
       this.ws.close();
@@ -286,6 +291,25 @@ export class MultiplayerClient {
       case WebSocket.CLOSING: return 'closing';
       case WebSocket.CLOSED: return 'closed';
       default: return 'unknown';
+    }
+  }
+
+  // Sistema de heartbeat para mantener la conexión viva
+  private startHeartbeat(): void {
+    this.heartbeatInterval = setInterval(() => {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.sendEvent({
+          type: 'HEARTBEAT',
+          data: {}
+        });
+      }
+    }, 25000); // Enviar cada 25 segundos (antes del timeout de 30s del servidor)
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
     }
   }
 }

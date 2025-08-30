@@ -149,6 +149,30 @@ npm run build         # Compilar para producción
 
 ---
 
+## 🆕 Mejoras Recientes (30 de Agosto, 2025)
+
+### 🔊 Configuración de Audio Universal
+- ✅ **Acceso para todos los jugadores** - No solo el host puede configurar audio
+- ✅ **Componente AudioControls reutilizable** - Mismo control para todas las pantallas
+- ✅ **Navegación sin desconexión** - Botón "Volver" mantiene la conexión
+
+### 🔑 Sistema de Keys Únicas
+- ✅ **Eliminación de warnings de React** - No más "Encountered two children with the same key"
+- ✅ **Estabilidad mejorada** - Lista de jugadores se renderiza correctamente
+- ✅ **Performance optimizada** - React puede optimizar re-renders eficientemente
+
+### 💓 Heartbeat Automático
+- ✅ **Conexiones estables** - No hay desconexiones por timeout de 30 segundos
+- ✅ **Detección de conexiones zombies** - Servidor limpia automáticamente
+- ✅ **Intervalo optimizado** - 25 segundos previene timeouts de 30 segundos
+
+### 🔗 API Endpoints Optimizados
+- ✅ **Formato consistente** - Cliente y servidor sincronizados
+- ✅ **Menos errores de parsing** - Array directo en lugar de objeto wrapper
+- ✅ **Campo currentPlayers** - Nomenclatura consistente en toda la aplicación
+
+---
+
 ## 🧪 Cómo Probar el Sistema Multiplayer
 
 ### Método 1: Script de Testing Automático (Recomendado)

@@ -1,53 +1,55 @@
 # 📚 Sombras de Morrowind - Documentación del Proyecto
 
-**Estado actual:** Fase 3 - Sistema Multiplayer Funcional  
-**Última actualización:** 29 de Agosto, 2025  
-**Versión:** 1.0.0
+**Estado actual:** Fase 3 - Sistema Multiplayer Funcional ✅  
+**Última actualización:** 30 de Agosto, 2025  
+**Versión:** 1.0.0 (Post-Limpieza)
+
+---
+
+## 📋 Documentos Disponibles
+
+### 📖 [ESTADO_ACTUAL_PROYECTO.md](./ESTADO_ACTUAL_PROYECTO.md)
+Resumen ejecutivo del proyecto, características implementadas, scripts disponibles y próximos pasos.
+
+### 🔧 [DOCUMENTACION_TECNICA.md](./DOCUMENTACION_TECNICA.md)
+Documentación técnica detallada: soluciones implementadas, arquitectura multiplayer y flujos de conexión.
 
 ---
 
 ## 🎯 Descripción del Proyecto
 
-**Sombras de Morrowind** es un juego de rol multijugador desarrollado con **Electron**, **React**, **TypeScript** y **Phaser 3**. El juego permite crear y unirse a salas multijugador donde los jugadores pueden interactuar en tiempo real.
+**Sombras de Morrowind** es un juego de rol multijugador desarrollado con **Electron + React + TypeScript**. El proyecto ha alcanzado un estado completamente funcional con sistema multiplayer en tiempo real, permitiendo crear y unirse a salas de juego con chat, estados de preparación y comunicación WebSocket estable.
 
 ---
 
-## 🏗️ Arquitectura del Proyecto
+## 🚀 Quick Start
 
+### Para Testing Multiplayer (Recomendado):
+```bash
+npm run dev:testing
 ```
-src/
-├── main/              # Proceso principal de Electron
-│   ├── main.ts        # Configuración de ventana y menús
-│   └── preload.ts     # Script de seguridad para renderer
-├── renderer/          # Interfaz de usuario (React)
-│   ├── components/    # Componentes reutilizables
-│   ├── screens/       # Pantallas principales
-│   ├── store/         # Estados globales (Zustand)
-│   ├── services/      # Servicios del cliente
-│   └── utils/         # Utilidades del cliente
-├── server/            # Servidor del juego
-│   ├── GameServer.ts  # Servidor principal con WebSocket
-│   └── websocket-server.ts # Punto de entrada del servidor
-├── shared/            # Código compartido cliente/servidor
-│   ├── types/         # Tipos TypeScript
-│   ├── services/      # Servicios compartidos
-│   └── utils/         # Utilidades compartidas
-└── test/              # Pruebas unitarias
+Este comando inicia automáticamente:
+- ✅ Servidor WebSocket (puerto 3000)
+- ✅ Webpack Dev Server (puerto 8080)  
+- ✅ Electron HOST (crear salas)
+- ✅ Electron CLIENTE (unirse a salas)
+
+### Scripts Individuales:
+```bash
+npm run host           # Solo servidor WebSocket
+npm run dev:renderer   # Solo Webpack Dev Server
+npm start             # Solo Electron
+npm run build         # Compilar para producción
 ```
 
 ---
 
-## 🛠️ Scripts Disponibles
+## 🧪 Testing Environment
 
-### Scripts de Desarrollo Principal
-- **`npm run dev:combined`** - ⭐ **RECOMENDADO**: Inicia todo el entorno de desarrollo (servidor + webpack + electron)
-- **`npm run dev:testing`** - 🧪 **NUEVO**: Entorno para testing de salas multijugador (2 clientes + servidor)
-
-### Scripts Individuales
-- **`npm run host`** - Inicia solo el servidor WebSocket (puerto 3000)
-- **`npm run dev:renderer`** - Inicia solo Webpack Dev Server (puerto 8080)
-- **`npm start`** - Inicia solo Electron
-- **`npm run dev:server`** - Servidor simple para testing
+1. **En HOST**: Crear sala con configuración
+2. **En CLIENTE**: Conectarse usando IP del host
+3. **Testing**: Chat, estados "Listo", inicio de partida
+4. **Tests automáticos**: Presiona "T" para ejecutar tests WebSocket
 
 ### Scripts de Construcción
 - **`npm run build`** - Construye toda la aplicación para producción

@@ -1,160 +1,215 @@
-import { useEffect, useCallback, useState } from 'react';
-import { MultiplayerService } from '../services/MultiplayerService';
-import { useRoomStore } from '../store/roomStore';
+import { useEffect } from 'react';
+import { useRoomStore } from '@renderer/store/roomStore';
+import { MultiplayerClient } from '@renderer/services/MultiplayerClient';
 import { logger } from '@shared/utils/logger';
-import { ConnectionStatus, GameMode, GameDifficulty } from '@shared/types/server';
+import { RoomState, Player, Message } from '@shared/types/multiplayer';
 
-export const useMultiplayerConnection = () => {
-  const [isConnected, setIsConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
+/**
+ * Hook personalizado que integra el MultiplayerClient con el roomStore
+ * Maneja todos los eventos del servidor y actualiza el store automáticamente
+ */
+export function useMultiplayerSync() {
+  const {
+    setRoom,
+    addPlayer,
+    removePlayer,
+    addMessage,
+    updatePlayerPreset,
+    updatePlayerReady,
+    setPlayerId,
+    setConnectionStatus,
+    clearRoom
+  } = useRoomStore();
 
   useEffect(() => {
-    const service = MultiplayerService.getInstance();
-    
-    const checkConnection = () => {
-      const status = service.getConnectionStatus();
-      const connected = status === ConnectionStatus.CONNECTED;
-      setIsConnected(connected);
+    const client = MultiplayerClient.getInstance();
+
+    // Event handlers
+    const handleConnected = () => {
+      logger.info('Multiplayer client connected', 'useMultiplayerSync');
+      setConnectionStatus('connected');
+    };
+
+    const handleDisconnected = () => {
+      logger.info('Multiplayer client disconnected', 'useMultiplayerSync');
+      setConnectionStatus('disconnected');
+      clearRoom();
+    };
+
+    const handleError = (error: any) => {
+      logger.error(`Multiplayer client error: ${error}`, 'useMultiplayerSync');
+      setConnectionStatus('error');
+    };
+
+    const handleRoomState = (roomState: RoomState) => {
+      logger.info(`Received room state: ${roomState.name}`, 'useMultiplayerSync');
+      setRoom(roomState);
       
-      switch (status) {
-        case ConnectionStatus.CONNECTED:
-          setConnectionStatus('connected');
-          break;
-        case ConnectionStatus.CONNECTING:
-          setConnectionStatus('connecting');
-          break;
-        case ConnectionStatus.ERROR:
-          setConnectionStatus('error');
-          break;
-        default:
-          setConnectionStatus('disconnected');
+      // Encontrar nuestro player ID
+      const { playerName } = useRoomStore.getState();
+      const ourPlayer = roomState.players.find(p => p.name === playerName);
+      if (ourPlayer) {
+        setPlayerId(ourPlayer.id);
       }
     };
 
-    // Verificar conexión inicial
-    checkConnection();
-
-    // Configurar listeners para cambios de estado
-    const interval = setInterval(checkConnection, 5000); // Verificar cada 5 segundos
-
-    return () => {
-      clearInterval(interval);
+    const handlePlayerJoined = (player: Player) => {
+      logger.info(`Player joined: ${player.name}`, 'useMultiplayerSync');
+      addPlayer(player);
     };
-  }, []);
 
-  const connectToServer = useCallback(async (serverUrl?: string): Promise<boolean> => {
-    setConnectionStatus('connecting');
-    const service = MultiplayerService.getInstance();
-    
-    try {
-      await service.connect(serverUrl);
-      setIsConnected(true);
-      setConnectionStatus('connected');
-      logger.info('Conectado al servidor exitosamente');
-      return true;
-    } catch (error) {
-      setIsConnected(false);
-      setConnectionStatus('error');
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error('Error al conectar al servidor:', errorMessage);
-      return false;
-    }
-  }, []);
+    const handlePlayerLeft = (data: { playerId: string; playerName: string }) => {
+      logger.info(`Player left: ${data.playerName}`, 'useMultiplayerSync');
+      removePlayer(data.playerId);
+    };
 
-  const disconnect = useCallback(() => {
-    const service = MultiplayerService.getInstance();
-    service.disconnect();
-    setIsConnected(false);
-    setConnectionStatus('disconnected');
-    logger.info('Desconectado del servidor');
-  }, []);
+    const handleNewMessage = (message: Message) => {
+      logger.info(`New message from ${message.senderName}: ${message.content}`, 'useMultiplayerSync');
+      addMessage(message);
+    };
+
+    const handlePresetUpdated = (data: { playerId: string; preset: string }) => {
+      logger.info(`Preset updated for player ${data.playerId}: ${data.preset}`, 'useMultiplayerSync');
+      updatePlayerPreset(data.playerId, data.preset);
+    };
+
+    const handlePlayerReadyChanged = (data: { playerId: string; isReady: boolean }) => {
+      logger.info(`Player ready changed: ${data.playerId} = ${data.isReady}`, 'useMultiplayerSync');
+      updatePlayerReady(data.playerId, data.isReady);
+    };
+
+    const handleServerError = (error: { message: string; code?: string }) => {
+      logger.error(`Server error: ${error.message} (${error.code})`, 'useMultiplayerSync');
+      // TODO: Mostrar error al usuario
+    };
+
+    // Registrar event listeners
+    client.on('connected', handleConnected);
+    client.on('disconnected', handleDisconnected);
+    client.on('error', handleError);
+    client.on('roomState', handleRoomState);
+    client.on('playerJoined', handlePlayerJoined);
+    client.on('playerLeft', handlePlayerLeft);
+    client.on('newMessage', handleNewMessage);
+    client.on('presetUpdated', handlePresetUpdated);
+    client.on('playerReadyChanged', handlePlayerReadyChanged);
+    client.on('serverError', handleServerError);
+
+    // Cleanup
+    return () => {
+      client.off('connected', handleConnected);
+      client.off('disconnected', handleDisconnected);
+      client.off('error', handleError);
+      client.off('roomState', handleRoomState);
+      client.off('playerJoined', handlePlayerJoined);
+      client.off('playerLeft', handlePlayerLeft);
+      client.off('newMessage', handleNewMessage);
+      client.off('presetUpdated', handlePresetUpdated);
+      client.off('playerReadyChanged', handlePlayerReadyChanged);
+      client.off('serverError', handleServerError);
+    };
+  }, [
+    setRoom,
+    addPlayer,
+    removePlayer,
+    addMessage,
+    updatePlayerPreset,
+    updatePlayerReady,
+    setPlayerId,
+    setConnectionStatus,
+    clearRoom
+  ]);
 
   return {
-    isConnected,
-    connectionStatus,
-    connectToServer,
-    disconnect
+    client: MultiplayerClient.getInstance()
   };
-};
+}
 
-export const useRoomOperations = () => {
-  const roomStore = useRoomStore();
+/**
+ * Hook simplificado para acciones del multiplayer
+ * Proporciona funciones listas para usar en los componentes
+ */
+export function useMultiplayerActions() {
+  const {
+    playerName,
+    playerId,
+    serverUrl,
+    connectionStatus,
+    setPlayerName,
+    setServerUrl,
+    setConnectionStatus
+  } = useRoomStore();
 
-  const createRoom = useCallback(async (roomData: {
-    name: string;
-    maxPlayers: number;
-    gameMode?: GameMode;
-    difficulty?: GameDifficulty;
-    isPrivate?: boolean;
-  }, playerName: string) => {
-    const service = MultiplayerService.getInstance();
-    
+  const client = MultiplayerClient.getInstance();
+
+  const connect = async (url: string) => {
+    setServerUrl(url);
+    setConnectionStatus('connecting');
     try {
-      const roomId = await service.createRoom({
-        name: roomData.name,
-        maxPlayers: roomData.maxPlayers,
-        gameMode: roomData.gameMode || GameMode.COOPERATIVE,
-        difficulty: roomData.difficulty || GameDifficulty.MEDIUM,
-        isPrivate: roomData.isPrivate || false
-      }, playerName);
-      logger.info('Sala creada:', roomId);
-      return roomId;
+      await client.connect(url);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error('Error al crear sala:', errorMessage);
+      setConnectionStatus('error');
       throw error;
     }
-  }, []);
+  };
 
-  const joinRoom = useCallback(async (roomId: string, playerName: string, password?: string) => {
-    const service = MultiplayerService.getInstance();
-    
-    try {
-      await service.joinRoom(roomId, playerName, password);
-      logger.info('Unido a la sala:', roomId);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error('Error al unirse a la sala:', errorMessage);
-      throw error;
-    }
-  }, []);
+  const disconnect = () => {
+    client.disconnect();
+  };
 
-  const leaveRoom = useCallback(async () => {
-    const service = MultiplayerService.getInstance();
-    const currentRoom = roomStore.currentRoom;
-    
-    if (!currentRoom) {
-      logger.warn('No hay sala activa para abandonar');
-      return;
+  const createRoom = (roomName: string, maxPlayers: number = 4) => {
+    if (!playerName) {
+      throw new Error('Player name is required');
     }
+    client.createRoom(roomName, playerName, maxPlayers);
+  };
 
-    try {
-      await service.leaveRoom();
-      logger.info('Sala abandonada:', currentRoom.id);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error('Error al abandonar sala:', errorMessage);
-      throw error;
+  const joinRoom = (roomId: string) => {
+    if (!playerName) {
+      throw new Error('Player name is required');
     }
-  }, [roomStore.currentRoom]);
+    client.joinRoom(roomId, playerName);
+  };
 
-  const sendChatMessage = useCallback((message: string) => {
-    const service = MultiplayerService.getInstance();
-    
-    try {
-      service.sendChatMessage(message);
-      logger.info('Mensaje enviado:', message);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error('Error al enviar mensaje:', errorMessage);
-      throw error;
-    }
-  }, []);
+  const leaveRoom = () => {
+    client.leaveRoom();
+  };
+
+  const sendMessage = (content: string) => {
+    client.sendMessage(content);
+  };
+
+  const updatePreset = (preset: string) => {
+    client.updatePreset(preset);
+  };
+
+  const setReady = (isReady: boolean) => {
+    client.setReady(isReady);
+  };
 
   return {
+    // Estado
+    playerName,
+    playerId,
+    serverUrl,
+    connectionStatus,
+    isConnected: client.isConnected(),
+    
+    // Configuración
+    setPlayerName,
+    
+    // Acciones de conexión
+    connect,
+    disconnect,
+    
+    // Acciones de sala
     createRoom,
     joinRoom,
     leaveRoom,
-    sendChatMessage
+    
+    // Acciones de juego
+    sendMessage,
+    updatePreset,
+    setReady
   };
-};
+}

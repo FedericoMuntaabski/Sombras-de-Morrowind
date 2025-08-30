@@ -29,14 +29,16 @@ process.on('SIGTERM', cleanup);
 async function startDevelopment() {
   log('🚀 Iniciando Sombras de Morrowind - Desarrollo Completo', colors.bright + colors.blue);
   log('📋 Este script iniciará:', colors.green);
-  log('   1. Servidor WebSocket (puerto 3000)', colors.green);
+  log('   1. Servidor Multiplayer WebSocket (puerto 3000)', colors.green);
   log('   2. Webpack Dev Server (puerto 8080)', colors.green);
   log('   3. Aplicación Electron', colors.green);
   log('', colors.reset);
 
   try {
-    // 1. Compilar la aplicación principal de Electron
-    log('🔨 Compilando aplicación principal...', colors.yellow);
+    // 1. Compilar la aplicación principal de Electron y el servidor
+    log('🔨 Compilando aplicación principal y servidor...', colors.yellow);
+    
+    // Compilar main de Electron
     const buildMain = spawn('npm', ['run', 'build:main'], {
       stdio: 'inherit',
       shell: true,
@@ -49,14 +51,32 @@ async function startDevelopment() {
           log('✅ Aplicación principal compilada', colors.green);
           resolve();
         } else {
+          reject(new Error(`Build main failed with code ${code}`));
+        }
+      });
+    });
+
+    // Compilar servidor
+    const buildServer = spawn('npm', ['run', 'build:server'], {
+      stdio: 'inherit', 
+      shell: true,
+      cwd: process.cwd()
+    });
+
+    await new Promise((resolve, reject) => {
+      buildServer.on('close', (code) => {
+        if (code === 0) {
+          log('✅ Servidor compilado', colors.green);
+          resolve();
+        } else {
           reject(new Error(`Build falló con código ${code}`));
         }
       });
     });
 
-    // 2. Iniciar servidor WebSocket
-    log('🌐 Iniciando servidor WebSocket...', colors.yellow);
-    const serverProcess = spawn('npm', ['run', 'host'], {
+    // 2. Iniciar servidor WebSocket Multiplayer
+    log('🌐 Iniciando servidor Multiplayer WebSocket...', colors.yellow);
+    const serverProcess = spawn('node', ['dist/server/multiplayer-server.js'], {
       stdio: ['ignore', 'pipe', 'pipe'],
       shell: true,
       cwd: process.cwd()

@@ -12,7 +12,7 @@ console.log('');
 console.log('🧪 Iniciando Entorno de Debug Multiplayer');
 console.log('==========================================');
 console.log('📋 Este script iniciará:');
-console.log('   1. Servidor Debug con logs (puerto 3000)');
+console.log('   1. Servidor Multiplayer WebSocket con logs (puerto 3000)');
 console.log('   2. Webpack Dev Server (puerto 8080)');
 console.log('   3. Cliente HOST (Electron)');
 console.log('   4. Cliente PLAYER2 (Electron)');
@@ -29,7 +29,7 @@ function cleanup() {
   console.log('\n🧹 Limpiando procesos...');
   
   if (serverProcess) {
-    console.log('🔪 Terminando servidor debug...');
+    console.log('🔪 Terminando servidor multiplayer...');
     serverProcess.kill('SIGTERM');
   }
   
@@ -103,7 +103,7 @@ async function startDebugEnvironment() {
     
     // 2. Iniciar servidor debug
     console.log('🚀 Iniciando servidor debug...');
-    serverProcess = spawn('node', ['dist/server/debug-server.js'], {
+    serverProcess = spawn('node', ['dist/server/multiplayer-server.js'], {
       cwd: process.cwd(),
       stdio: 'pipe',
       env: { ...process.env }

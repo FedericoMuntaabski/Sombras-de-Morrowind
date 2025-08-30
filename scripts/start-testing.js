@@ -74,7 +74,7 @@ async function startTestingEnvironment() {
   log('🧪 Iniciando Entorno de Testing de Salas Multijugador', colors.bright + colors.cyan);
   log('====================================================', colors.cyan);
   log('📋 Este script iniciará:', colors.green);
-  log('   1. Servidor WebSocket (puerto 3000)', colors.green);
+  log('   1. Servidor Multiplayer WebSocket (puerto 3000)', colors.green);
   log('   2. Webpack Dev Server (puerto 8080)', colors.green);
   log('   3. Electron Host (primer cliente)', colors.green);
   log('   4. Electron Cliente (segundo cliente)', colors.green);
@@ -108,9 +108,9 @@ async function startTestingEnvironment() {
       });
     });
 
-    // 2. Iniciar servidor WebSocket
-    log('🌐 Iniciando servidor WebSocket...', colors.yellow);
-    const serverProcess = spawn('npm', ['run', 'host'], {
+    // 2. Iniciar servidor Multiplayer WebSocket
+    log('🌐 Iniciando servidor Multiplayer WebSocket...', colors.yellow);
+    const serverProcess = spawn('node', ['dist/server/multiplayer-server.js'], {
       stdio: 'pipe',
       shell: true,
       cwd: process.cwd()
@@ -228,9 +228,23 @@ async function startTestingEnvironment() {
     log('   - Cambio de estado "Listo/No Listo"', colors.white);
     log('   - Inicio de partida desde el host', colors.white);
     log('   - Navegación entre pantallas', colors.white);
+    log('', colors.reset);
+    log('4. 🧪 Testing automático WebSocket:', colors.blue);
+    log('   - Presiona "T" para ejecutar tests automáticos de WebSocket', colors.white);
+    log('   - Los tests validarán conexión, creación de salas y mensajes', colors.white);
     log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', colors.yellow);
     log('', colors.reset);
-    log('💡 Presiona Ctrl+C para cerrar todo', colors.yellow);
+    log('💡 Presiona Ctrl+C para cerrar todo | Presiona "T" para tests WebSocket', colors.yellow);
+
+    // Configurar input para tests automáticos
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.on('data', (key) => {
+      if (key.toString() === 't' || key.toString() === 'T') {
+        log('\n🧪 Ejecutando tests automáticos de WebSocket...', colors.bright + colors.blue);
+        runWebSocketTests();
+      }
+    });
 
     // Configurar manejadores de cierre
     const cleanup = () => {
@@ -255,7 +269,7 @@ async function startTestingEnvironment() {
         log(`\n⚠️  ${name} cerrado (código: ${code})`, colors.yellow);
         if (name === 'Servidor' && code !== 0) {
           log('🚨 Servidor cerrado inesperadamente - mantener otros procesos activos...', colors.red);
-          log('💡 Puedes reiniciar el servidor manualmente con: npm run host', colors.cyan);
+          log('💡 Puedes reiniciar el servidor manualmente compilando y ejecutando: node dist/server/multiplayer-server.js', colors.cyan);
           // No hacer cleanup automático para permitir debugging
         }
       });
@@ -275,6 +289,26 @@ async function startTestingEnvironment() {
     
     process.exit(1);
   }
+}
+
+// Función para ejecutar tests automáticos de WebSocket
+function runWebSocketTests() {
+  log('🚀 Iniciando tests automáticos de WebSocket...', colors.cyan);
+  
+  const testProcess = spawn('node', ['scripts/test-multiplayer-websocket.js'], {
+    stdio: 'inherit',
+    shell: true,
+    cwd: process.cwd()
+  });
+
+  testProcess.on('close', (code) => {
+    if (code === 0) {
+      log('✅ Tests de WebSocket completados exitosamente', colors.green);
+    } else {
+      log(`❌ Tests de WebSocket fallaron (código: ${code})`, colors.red);
+    }
+    log('💡 Presiona "T" nuevamente para repetir tests', colors.yellow);
+  });
 }
 
 // Mostrar información del sistema

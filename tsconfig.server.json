@@ -28,6 +28,7 @@
     "dist",
     "src/main",
     "src/renderer",
-    "src/test"
+    "src/test",
+    "src/server/legacy"
   ]
 }

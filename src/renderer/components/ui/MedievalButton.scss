@@ -1,3 +1,5 @@
+@use 'sass:color';
+
 // Variables de colores medievales
 $stone-dark: #2c2416;
 $stone-medium: #3d3527;
@@ -118,14 +120,6 @@ $text-shadow: #1a1a1a;
     transition: all 0.3s ease;
     letter-spacing: 0.08em;
     position: relative;
-    z-index: 10;
-    pointer-events: none;
-    line-height: 1.2;
-    
-    // Fallback para asegurar visibilidad
-    background-color: transparent !important;
-    opacity: 1 !important;
-    display: block !important;
   }
 
   // Efectos de partículas/runas (opcional)

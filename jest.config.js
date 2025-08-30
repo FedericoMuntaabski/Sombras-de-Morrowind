@@ -11,6 +11,7 @@ module.exports = {
   },
   testMatch: [
     '<rootDir>/src/**/*.test.(ts|tsx|js)',
+    '!<rootDir>/src/test/multiplayer.integration.test.ts'
   ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',

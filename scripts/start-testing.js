@@ -20,7 +20,7 @@ function log(message, color = colors.reset) {
   console.log(`${color}${message}${colors.reset}`);
 }
 
-// Función para matar procesos en puerto específico (Windows)
+// Función para matar procesos en puerto específico
 async function killPortProcess(port) {
   return new Promise((resolve) => {
     if (os.platform() === 'win32') {
@@ -70,66 +70,103 @@ async function killPortProcess(port) {
   });
 }
 
-async function startTestingEnvironment() {
-  log('🧪 Iniciando Entorno de Testing de Salas Multijugador', colors.bright + colors.cyan);
-  log('====================================================', colors.cyan);
-  log('📋 Este script iniciará:', colors.green);
-  log('   1. Servidor Multiplayer WebSocket (puerto 3000)', colors.green);
-  log('   2. Webpack Dev Server (puerto 8080)', colors.green);
-  log('   3. Electron Host (primer cliente)', colors.green);
-  log('   4. Electron Cliente (segundo cliente)', colors.green);
+async function startMultiplayerTestingEnvironment() {
+  log('🎮 SISTEMA MULTIPLAYER TESTING - Sombras de Morrowind', colors.bright + colors.cyan);
+  log('═══════════════════════════════════════════════════════════', colors.cyan);
+  log('📋 Entorno de testing que iniciará:', colors.green);
+  log('   1. 🌐 Servidor WebSocket Multiplayer (puerto 3000)', colors.green);
+  log('   2. 📦 Webpack Dev Server (puerto 8080)', colors.green);
+  log('   3. 🏠 Electron HOST - Cliente que crea la sala', colors.green);
+  log('   4. 🔗 Electron CLIENTE - Cliente que se conecta', colors.green);
   log('', colors.reset);
 
   const processes = [];
 
   try {
-    // 0. Verificar y liberar puertos si están ocupados
+    // 0. Verificar y liberar puertos
     log('🔍 Verificando disponibilidad de puertos...', colors.yellow);
     await killPortProcess(3000);
     await killPortProcess(8080);
-    log('✅ Puertos liberados', colors.green);
+    log('✅ Puertos 3000 y 8080 liberados', colors.green);
 
-    // 1. Compilar la aplicación principal
+    // 1. Compilar aplicación principal
     log('🔨 Compilando aplicación principal...', colors.yellow);
     const buildMain = spawn('npm', ['run', 'build:main'], {
-      stdio: 'inherit',
+      stdio: 'pipe',
       shell: true,
       cwd: process.cwd()
     });
 
     await new Promise((resolve, reject) => {
+      buildMain.stdout.on('data', (data) => {
+        const output = data.toString().trim();
+        if (output) log(`[Build-Main] ${output}`, colors.cyan);
+      });
+
+      buildMain.stderr.on('data', (data) => {
+        log(`[Build-Main] ${data.toString().trim()}`, colors.red);
+      });
+
       buildMain.on('close', (code) => {
         if (code === 0) {
-          log('✅ Aplicación principal compilada', colors.green);
+          log('✅ Aplicación principal compilada correctamente', colors.green);
           resolve();
         } else {
-          reject(new Error(`Build failed with code ${code}`));
+          reject(new Error(`Build principal falló con código ${code}`));
         }
       });
     });
 
-    // 2. Iniciar servidor Multiplayer WebSocket
-    log('🌐 Iniciando servidor Multiplayer WebSocket...', colors.yellow);
+    // 2. Compilar servidor multiplayer
+    log('🔨 Compilando servidor multiplayer...', colors.yellow);
+    const buildServer = spawn('npm', ['run', 'build:server'], {
+      stdio: 'pipe',
+      shell: true,
+      cwd: process.cwd()
+    });
+
+    await new Promise((resolve, reject) => {
+      buildServer.stdout.on('data', (data) => {
+        const output = data.toString().trim();
+        if (output) log(`[Build-Server] ${output}`, colors.cyan);
+      });
+
+      buildServer.stderr.on('data', (data) => {
+        log(`[Build-Server] ${data.toString().trim()}`, colors.red);
+      });
+
+      buildServer.on('close', (code) => {
+        if (code === 0) {
+          log('✅ Servidor multiplayer compilado correctamente', colors.green);
+          resolve();
+        } else {
+          reject(new Error(`Build servidor falló con código ${code}`));
+        }
+      });
+    });
+
+    // 3. Iniciar Servidor WebSocket Multiplayer
+    log('🌐 Iniciando servidor WebSocket multiplayer...', colors.yellow);
     const serverProcess = spawn('node', ['dist/server/multiplayer-server.js'], {
       stdio: 'pipe',
       shell: true,
       cwd: process.cwd()
     });
 
-    processes.push({ name: 'Servidor', process: serverProcess });
+    processes.push({ name: 'Servidor-Multiplayer', process: serverProcess });
 
     serverProcess.stdout.on('data', (data) => {
-      log(`[Servidor] ${data.toString().trim()}`, colors.blue);
+      log(`[🌐 Servidor] ${data.toString().trim()}`, colors.blue);
     });
 
     serverProcess.stderr.on('data', (data) => {
-      log(`[Servidor] ${data.toString().trim()}`, colors.red);
+      log(`[🌐 Servidor] ${data.toString().trim()}`, colors.red);
     });
 
     // Esperar que el servidor arranque
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // 3. Iniciar Webpack Dev Server
+    // 4. Iniciar Webpack Dev Server
     log('📦 Iniciando Webpack Dev Server...', colors.yellow);
     const webpackProcess = spawn('npm', ['run', 'dev:renderer'], {
       stdio: 'pipe',
@@ -137,27 +174,32 @@ async function startTestingEnvironment() {
       cwd: process.cwd()
     });
 
-    processes.push({ name: 'Webpack', process: webpackProcess });
+    processes.push({ name: 'Webpack-Dev', process: webpackProcess });
 
     webpackProcess.stdout.on('data', (data) => {
       const output = data.toString().trim();
       if (output.includes('webpack compiled')) {
-        log(`[Webpack] ✅ Compilación completada`, colors.green);
-      } else {
-        log(`[Webpack] ${output}`, colors.magenta);
+        log(`[📦 Webpack] ✅ Compilación completada`, colors.green);
+      } else if (output.includes('Compiled successfully')) {
+        log(`[📦 Webpack] ✅ Compilado exitosamente`, colors.green);
+      } else if (output) {
+        log(`[📦 Webpack] ${output}`, colors.magenta);
       }
     });
 
     webpackProcess.stderr.on('data', (data) => {
-      log(`[Webpack] ${data.toString().trim()}`, colors.red);
+      const error = data.toString().trim();
+      if (error && !error.includes('DeprecationWarning') && !error.includes('punycode')) {
+        log(`[📦 Webpack] ${error}`, colors.red);
+      }
     });
 
     // Esperar que webpack compile
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise(resolve => setTimeout(resolve, 8000));
 
-    // 4. Iniciar primer Electron (Host)
-    log('🖥️  Iniciando Electron HOST...', colors.yellow);
-    log('   👨‍💼 Este será el cliente que crea la sala', colors.cyan);
+    // 5. Iniciar Electron HOST
+    log('🏠 Iniciando Electron HOST (Creador de sala)...', colors.yellow);
+    log('   � Este cliente puede crear salas de juego', colors.cyan);
     
     const electronHost = spawn('npm', ['start'], {
       stdio: 'pipe',
@@ -166,26 +208,31 @@ async function startTestingEnvironment() {
       env: { 
         ...process.env, 
         ELECTRON_IS_DEV: 'true',
-        ELECTRON_ROLE: 'HOST'
+        MULTIPLAYER_ROLE: 'HOST',
+        MULTIPLAYER_SERVER: 'ws://localhost:3000'
       }
     });
 
-    processes.push({ name: 'Electron-Host', process: electronHost });
+    processes.push({ name: 'Electron-HOST', process: electronHost });
 
     electronHost.stdout.on('data', (data) => {
-      log(`[Host] ${data.toString().trim()}`, colors.green);
+      const output = data.toString().trim();
+      if (output) log(`[🏠 HOST] ${output}`, colors.green);
     });
 
     electronHost.stderr.on('data', (data) => {
-      log(`[Host] ${data.toString().trim()}`, colors.red);
+      const error = data.toString().trim();
+      if (error && !error.includes('DeprecationWarning') && !error.includes('Electron Security Warning')) {
+        log(`[🏠 HOST] ${error}`, colors.red);
+      }
     });
 
     // Esperar que el host arranque
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
-    // 5. Iniciar segundo Electron (Cliente)
-    log('🖥️  Iniciando Electron CLIENTE...', colors.yellow);
-    log('   👤 Este será el cliente que se conecta a la sala', colors.cyan);
+    // 6. Iniciar Electron CLIENTE
+    log('� Iniciando Electron CLIENTE (Se conecta a salas)...', colors.yellow);
+    log('   👤 Este cliente se conecta a salas existentes', colors.cyan);
     
     const electronClient = spawn('npm', ['start'], {
       stdio: 'pipe',
@@ -194,83 +241,121 @@ async function startTestingEnvironment() {
       env: { 
         ...process.env, 
         ELECTRON_IS_DEV: 'true',
-        ELECTRON_ROLE: 'CLIENT'
+        MULTIPLAYER_ROLE: 'CLIENT',
+        MULTIPLAYER_SERVER: 'ws://localhost:3000'
       }
     });
 
-    processes.push({ name: 'Electron-Client', process: electronClient });
+    processes.push({ name: 'Electron-CLIENT', process: electronClient });
 
     electronClient.stdout.on('data', (data) => {
-      log(`[Cliente] ${data.toString().trim()}`, colors.cyan);
+      const output = data.toString().trim();
+      if (output) log(`[🔗 CLIENT] ${output}`, colors.cyan);
     });
 
     electronClient.stderr.on('data', (data) => {
-      log(`[Cliente] ${data.toString().trim()}`, colors.red);
+      const error = data.toString().trim();
+      if (error && !error.includes('DeprecationWarning') && !error.includes('Electron Security Warning')) {
+        log(`[🔗 CLIENT] ${error}`, colors.red);
+      }
     });
 
     log('', colors.reset);
-    log('🎉 ¡Entorno de testing iniciado exitosamente!', colors.bright + colors.green);
+    log('🎉 ¡ENTORNO MULTIPLAYER INICIADO EXITOSAMENTE!', colors.bright + colors.green);
     log('', colors.reset);
-    log('📝 INSTRUCCIONES DE TESTING:', colors.bright + colors.yellow);
-    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', colors.yellow);
-    log('1. 🏠 En la ventana HOST:', colors.cyan);
-    log('   - Ve a "Crear Sala"', colors.white);
-    log('   - Configura tu sala y créala', colors.white);
-    log('   - Anota la IP y puerto que se muestran', colors.white);
+    log('🎮 GUÍA DE TESTING MULTIPLAYER:', colors.bright + colors.yellow);
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', colors.yellow);
     log('', colors.reset);
-    log('2. 🔗 En la ventana CLIENTE:', colors.magenta);
-    log('   - Ve a "Unirse a Sala"', colors.white);
-    log('   - Introduce la IP y puerto del host', colors.white);
-    log('   - Conéctate a la sala', colors.white);
+    log('1. 🏠 EN LA VENTANA HOST (Creador de sala):', colors.green);
+    log('   ➤ Ir a "Crear Sala"', colors.white);
+    log('   ➤ Configurar nombre de sala y jugadores máximos', colors.white);
+    log('   ➤ Ingresar tu nombre de jugador', colors.white);
+    log('   ➤ Crear la sala y anotar la IP/puerto mostrados', colors.white);
     log('', colors.reset);
-    log('3. 🎮 Testing de funcionalidades:', colors.green);
-    log('   - Chat en la sala de espera', colors.white);
-    log('   - Cambio de estado "Listo/No Listo"', colors.white);
-    log('   - Inicio de partida desde el host', colors.white);
-    log('   - Navegación entre pantallas', colors.white);
+    log('2. 🔗 EN LA VENTANA CLIENTE (Se conecta):', colors.cyan);
+    log('   ➤ Ir a "Unirse a Sala"', colors.white);
+    log('   ➤ Ingresar la IP del servidor (localhost:3000)', colors.white);
+    log('   ➤ Ingresar tu nombre de jugador', colors.white);
+    log('   ➤ Conectarse a la sala', colors.white);
     log('', colors.reset);
-    log('4. 🧪 Testing automático WebSocket:', colors.blue);
-    log('   - Presiona "T" para ejecutar tests automáticos de WebSocket', colors.white);
-    log('   - Los tests validarán conexión, creación de salas y mensajes', colors.white);
-    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', colors.yellow);
+    log('3. 💬 TESTING DEL CHAT EN TIEMPO REAL:', colors.magenta);
+    log('   ➤ Escribir mensajes desde ambos clientes', colors.white);
+    log('   ➤ Verificar sincronización instantánea', colors.white);
+    log('   ➤ Probar caracteres especiales y emojis', colors.white);
     log('', colors.reset);
-    log('💡 Presiona Ctrl+C para cerrar todo | Presiona "T" para tests WebSocket', colors.yellow);
+    log('4. ⚙️ TESTING DE SELECCIÓN DE PRESETS:', colors.blue);
+    log('   ➤ Cambiar preset desde ambos clientes', colors.white);
+    log('   ➤ Verificar que se actualiza en ambas pantallas', colors.white);
+    log('   ➤ Probar diferentes configuraciones', colors.white);
+    log('', colors.reset);
+    log('5. ✅ TESTING DE ESTADOS "LISTO":', colors.green);
+    log('   ➤ Marcar/desmarcar "Listo" desde ambos clientes', colors.white);
+    log('   ➤ Verificar sincronización de estados', colors.white);
+    log('   ➤ Comprobar que la lista de jugadores se actualiza', colors.white);
+    log('', colors.reset);
+    log('6. 👥 TESTING DE GESTIÓN DE JUGADORES:', colors.yellow);
+    log('   ➤ Verificar lista actualizada cuando se conecta alguien', colors.white);
+    log('   ➤ Verificar lista actualizada cuando alguien se desconecta', colors.white);
+    log('   ➤ Probar reconexión automática', colors.white);
+    log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', colors.yellow);
+    log('', colors.reset);
+    log('🧪 TESTS AUTOMÁTICOS DISPONIBLES:', colors.bright + colors.blue);
+    log('💡 Presiona "T" para ejecutar tests automáticos de WebSocket', colors.cyan);
+    log('💡 Presiona Ctrl+C para cerrar todo el entorno de testing', colors.yellow);
+    log('', colors.reset);
 
     // Configurar input para tests automáticos
     process.stdin.setRawMode(true);
     process.stdin.resume();
     process.stdin.on('data', (key) => {
-      if (key.toString() === 't' || key.toString() === 'T') {
+      const keyStr = key.toString();
+      if (keyStr === 't' || keyStr === 'T') {
         log('\n🧪 Ejecutando tests automáticos de WebSocket...', colors.bright + colors.blue);
         runWebSocketTests();
+      } else if (keyStr === '\u0003') { // Ctrl+C
+        cleanup();
       }
     });
 
     // Configurar manejadores de cierre
     const cleanup = () => {
-      log('\n🛑 Cerrando entorno de testing...', colors.yellow);
+      log('\n🛑 Cerrando entorno de testing multiplayer...', colors.yellow);
+      
+      // Restaurar modo de terminal
+      try {
+        process.stdin.setRawMode(false);
+      } catch (e) {}
+      
       processes.forEach(({ name, process }) => {
         try {
-          process.kill('SIGTERM');
+          if (os.platform() === 'win32') {
+            spawn('taskkill', ['/F', '/T', '/PID', process.pid.toString()], { shell: true });
+          } else {
+            process.kill('SIGTERM');
+          }
           log(`   ✅ ${name} cerrado`, colors.green);
         } catch (error) {
-          log(`   ❌ Error cerrando ${name}`, colors.red);
+          log(`   ❌ Error cerrando ${name}: ${error.message}`, colors.red);
         }
       });
+      
+      log('👋 Entorno de testing cerrado. ¡Hasta la próxima!', colors.cyan);
       process.exit(0);
     };
 
     process.on('SIGINT', cleanup);
     process.on('SIGTERM', cleanup);
+    process.on('beforeExit', cleanup);
 
     // Manejar cierre de procesos individuales
     processes.forEach(({ name, process }) => {
       process.on('close', (code) => {
-        log(`\n⚠️  ${name} cerrado (código: ${code})`, colors.yellow);
-        if (name === 'Servidor' && code !== 0) {
-          log('🚨 Servidor cerrado inesperadamente - mantener otros procesos activos...', colors.red);
-          log('💡 Puedes reiniciar el servidor manualmente compilando y ejecutando: node dist/server/multiplayer-server.js', colors.cyan);
-          // No hacer cleanup automático para permitir debugging
+        if (code !== 0) {
+          log(`\n⚠️  ${name} cerrado inesperadamente (código: ${code})`, colors.yellow);
+          if (name === 'Servidor-Multiplayer') {
+            log('🚨 Servidor multiplayer caído - otros procesos seguirán activos', colors.red);
+            log('💡 Puedes reiniciar el servidor con: npm run host', colors.cyan);
+          }
         }
       });
     });
@@ -281,7 +366,11 @@ async function startTestingEnvironment() {
     // Limpiar procesos en caso de error
     processes.forEach(({ name, process }) => {
       try {
-        process.kill('SIGTERM');
+        if (os.platform() === 'win32') {
+          spawn('taskkill', ['/F', '/T', '/PID', process.pid.toString()], { shell: true });
+        } else {
+          process.kill('SIGTERM');
+        }
       } catch (killError) {
         log(`❌ Error cerrando ${name}: ${killError.message}`, colors.red);
       }
@@ -293,7 +382,7 @@ async function startTestingEnvironment() {
 
 // Función para ejecutar tests automáticos de WebSocket
 function runWebSocketTests() {
-  log('🚀 Iniciando tests automáticos de WebSocket...', colors.cyan);
+  log('🚀 Iniciando tests automáticos de multiplayer...', colors.cyan);
   
   const testProcess = spawn('node', ['scripts/test-multiplayer-websocket.js'], {
     stdio: 'inherit',
@@ -303,23 +392,25 @@ function runWebSocketTests() {
 
   testProcess.on('close', (code) => {
     if (code === 0) {
-      log('✅ Tests de WebSocket completados exitosamente', colors.green);
+      log('✅ Tests de multiplayer completados exitosamente', colors.green);
     } else {
-      log(`❌ Tests de WebSocket fallaron (código: ${code})`, colors.red);
+      log(`❌ Tests de multiplayer fallaron (código: ${code})`, colors.red);
     }
-    log('💡 Presiona "T" nuevamente para repetir tests', colors.yellow);
+    log('💡 Presiona "T" nuevamente para repetir tests | Ctrl+C para salir', colors.yellow);
   });
 }
 
 // Mostrar información del sistema
-log('💻 Sistema:', colors.bright);
+log('�️  INFORMACIÓN DEL SISTEMA:', colors.bright);
 log(`   OS: ${os.type()} ${os.release()}`, colors.white);
-log(`   Arch: ${os.arch()}`, colors.white);
+log(`   Arquitectura: ${os.arch()}`, colors.white);
 log(`   Node.js: ${process.version}`, colors.white);
 log(`   Directorio: ${process.cwd()}`, colors.white);
 log('', colors.reset);
 
-startTestingEnvironment().catch(error => {
+// Iniciar el entorno
+startMultiplayerTestingEnvironment().catch(error => {
   log(`❌ Error fatal: ${error.message}`, colors.red);
+  console.error(error);
   process.exit(1);
 });

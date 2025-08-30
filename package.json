@@ -7,7 +7,7 @@
   "license": "MIT",
   "homepage": ".",
   "scripts": {
-    "dev:combined": "node scripts/start-combined.js",
+    "dev:testing": "node scripts/start-testing.js",
     "testing": "node scripts/start-testing.js",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -18,7 +18,7 @@
     "build:prod": "npm run build:main && npm run build:server && npm run build:renderer",
     "dev:renderer": "webpack serve --config webpack.renderer.config.js --mode development",
     "start": "electron dist/main.js",
-    "health-check": "node scripts/health-check.js",
+    "host": "npm run build:server && node dist/server/multiplayer-server.js",
     "clean": "rimraf dist",
     "lint": "eslint src --ext .ts,.tsx --fix",
     "package": "npm run build:prod && electron-builder"

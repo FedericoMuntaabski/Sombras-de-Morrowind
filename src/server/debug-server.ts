@@ -3,13 +3,9 @@ import * as http from 'http';
 import * as path from 'path';
 import { WebSocketServer, WebSocket } from 'ws';
 import { config } from 'dotenv';
-import { SystemLogger } from '@shared/utils/SystemLogger';
 
 // Cargar variables de entorno
 config();
-
-// Logger específico para debug server
-const serverLogger = SystemLogger.create('DebugServer');
 
 // Configuración básica
 const serverConfig = {

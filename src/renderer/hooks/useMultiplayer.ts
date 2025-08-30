@@ -53,6 +53,26 @@ export function useMultiplayerSync() {
       }
     };
 
+    const handleRoomCreated = (data: { room: RoomState; playerId: string }) => {
+      logger.info(`Room created: ${data.room.name}`, 'useMultiplayerSync');
+      setRoom(data.room);
+      setPlayerId(data.playerId);
+      
+      // Save session info for reconnection
+      localStorage.setItem('lastPlayerId', data.playerId);
+      localStorage.setItem('lastRoomId', data.room.id);
+    };
+
+    const handleRoomJoined = (data: { room: RoomState; playerId: string }) => {
+      logger.info(`Room joined: ${data.room.name}`, 'useMultiplayerSync');
+      setRoom(data.room);
+      setPlayerId(data.playerId);
+      
+      // Save session info for reconnection
+      localStorage.setItem('lastPlayerId', data.playerId);
+      localStorage.setItem('lastRoomId', data.room.id);
+    };
+
     const handlePlayerJoined = (player: Player) => {
       logger.info(`Player joined: ${player.name}`, 'useMultiplayerSync');
       addPlayer(player);
@@ -88,6 +108,8 @@ export function useMultiplayerSync() {
     client.on('disconnected', handleDisconnected);
     client.on('error', handleError);
     client.on('roomState', handleRoomState);
+    client.on('roomCreated', handleRoomCreated);
+    client.on('roomJoined', handleRoomJoined);
     client.on('playerJoined', handlePlayerJoined);
     client.on('playerLeft', handlePlayerLeft);
     client.on('newMessage', handleNewMessage);
@@ -101,6 +123,8 @@ export function useMultiplayerSync() {
       client.off('disconnected', handleDisconnected);
       client.off('error', handleError);
       client.off('roomState', handleRoomState);
+      client.off('roomCreated', handleRoomCreated);
+      client.off('roomJoined', handleRoomJoined);
       client.off('playerJoined', handlePlayerJoined);
       client.off('playerLeft', handlePlayerLeft);
       client.off('newMessage', handleNewMessage);

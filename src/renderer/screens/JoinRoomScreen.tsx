@@ -6,12 +6,18 @@ import { logger } from '@shared/utils/logger';
 import MedievalButton from '@renderer/components/ui/MedievalButton';
 import './JoinRoomScreen.scss';
 
+interface AvailableRoom {
+  id: string;
+  name: string;
+  currentPlayers: number;
+  maxPlayers: number;
+}
+
 const JoinRoomScreen: React.FC = () => {
   const { setCurrentScreen } = useAppStore();
   const { 
     setPlayerName, 
     playerName,
-    connectionStatus,
     currentRoom
   } = useRoomStore();
   const { connect, joinRoom } = useMultiplayerActions();
@@ -23,15 +29,56 @@ const JoinRoomScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [serverIP, setServerIP] = useState('localhost');
   const [serverPort, setServerPort] = useState('3000');
-  const [roomId, setRoomId] = useState('default-room');
+  const [availableRooms, setAvailableRooms] = useState<AvailableRoom[]>([]);
+  const [selectedRoomId, setSelectedRoomId] = useState<string>('');
+  const [isLoadingRooms, setIsLoadingRooms] = useState(false);
 
   // Navigate to waiting room when successfully joined
   useEffect(() => {
-    if (currentRoom && connectionStatus === 'connected') {
+    if (currentRoom && isJoining) {
       logger.info('Successfully joined room, navigating to waiting room', 'JoinRoomScreen');
       setCurrentScreen('waiting');
+      setIsJoining(false);
     }
-  }, [currentRoom, connectionStatus, setCurrentScreen]);
+  }, [currentRoom, isJoining, setCurrentScreen]);
+
+  // Load available rooms when component mounts or server info changes
+  const loadAvailableRooms = useCallback(async () => {
+    if (!serverIP.trim() || !serverPort.trim()) return;
+    
+    setIsLoadingRooms(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(`http://${serverIP}:${serverPort}/api/rooms`);
+      if (!response.ok) {
+        throw new Error('No se pudieron cargar las salas disponibles');
+      }
+      
+      const rooms: AvailableRoom[] = await response.json();
+      setAvailableRooms(rooms);
+      
+      // Auto-select first room if available
+      if (rooms.length > 0 && !selectedRoomId) {
+        setSelectedRoomId(rooms[0].id);
+      }
+    } catch (error) {
+      logger.error(`Failed to load rooms: ${error}`, 'JoinRoomScreen');
+      setError('No se pudieron cargar las salas. Verifica la IP y puerto del servidor.');
+      setAvailableRooms([]);
+    } finally {
+      setIsLoadingRooms(false);
+    }
+  }, [serverIP, serverPort, selectedRoomId]);
+
+  // Load rooms when server info changes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      loadAvailableRooms();
+    }, 500); // Debounce para evitar muchas peticiones
+
+    return () => clearTimeout(timeoutId);
+  }, [loadAvailableRooms]);
 
   const handleJoinRoom = useCallback(async () => {
     setError(null);
@@ -52,14 +99,19 @@ const JoinRoomScreen: React.FC = () => {
       return;
     }
 
-    const port = parseInt(serverPort) || 3000;
-    if (port < 1000 || port > 65535) {
-      setError('El puerto debe estar entre 1000 y 65535');
+    if (!serverPort.trim()) {
+      setError('Por favor, introduce el puerto del servidor');
       return;
     }
 
-    if (!roomId.trim()) {
-      setError('Por favor, introduce el ID de la sala');
+    const port = parseInt(serverPort);
+    if (isNaN(port) || port < 1000 || port > 65535) {
+      setError('El puerto debe ser un número entre 1000 y 65535');
+      return;
+    }
+
+    if (!selectedRoomId) {
+      setError('Por favor, selecciona una sala disponible o espera a que se carguen');
       return;
     }
 
@@ -72,9 +124,9 @@ const JoinRoomScreen: React.FC = () => {
       
       await connect(serverUrl);
       
-      // Unirse a la sala especificada
-      logger.info(`Attempting to join room: ${roomId}`, 'JoinRoomScreen');
-      joinRoom(roomId);
+      // Unirse a la sala seleccionada
+      logger.info(`Attempting to join room: ${selectedRoomId}`, 'JoinRoomScreen');
+      joinRoom(selectedRoomId);
       
       // La navegación ocurrirá automáticamente cuando recibamos ROOM_STATE del servidor
       
@@ -84,7 +136,7 @@ const JoinRoomScreen: React.FC = () => {
       setError(errorMessage);
       setIsJoining(false);
     }
-  }, [serverIP, serverPort, playerName, roomId, connect, joinRoom]);
+  }, [serverIP, serverPort, playerName, selectedRoomId, connect, joinRoom]);
 
   const handleBack = useCallback(() => {
     logger.info('Returning to main menu', 'JoinRoomScreen');
@@ -128,7 +180,7 @@ const JoinRoomScreen: React.FC = () => {
               type="text"
               value={serverIP}
               onChange={(e) => setServerIP(e.target.value)}
-              placeholder="192.168.1.100 o localhost"
+              placeholder="localhost"
               className="form-input"
               disabled={isJoining}
             />
@@ -150,16 +202,27 @@ const JoinRoomScreen: React.FC = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="roomId" className="form-label">ID de la Sala:</label>
-            <input
-              id="roomId"
-              type="text"
-              value={roomId}
-              onChange={(e) => setRoomId(e.target.value)}
-              placeholder="default-room"
-              className="form-input"
-              disabled={isJoining}
-            />
+            <label className="form-label">Salas Disponibles:</label>
+            {isLoadingRooms ? (
+              <div className="loading-message">Cargando salas...</div>
+            ) : availableRooms.length > 0 ? (
+              <div className="rooms-list">
+                {availableRooms.map(room => (
+                  <div 
+                    key={room.id}
+                    className={`room-item ${selectedRoomId === room.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedRoomId(room.id)}
+                  >
+                    <div className="room-name">{room.name}</div>
+                    <div className="room-players">{room.currentPlayers}/{room.maxPlayers} jugadores</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="no-rooms-message">
+                {serverIP && serverPort ? 'No hay salas disponibles' : 'Introduce IP y puerto para ver salas'}
+              </div>
+            )}
           </div>
 
           {error && (
@@ -168,16 +231,10 @@ const JoinRoomScreen: React.FC = () => {
             </div>
           )}
 
-          {connectionStatus === 'connecting' && (
-            <div className="info-message">
-              <span>Conectando al servidor...</span>
-            </div>
-          )}
-
           <div className="form-actions">
             <MedievalButton 
               onClick={handleJoinRoom}
-              disabled={isJoining || connectionStatus === 'connecting'}
+              disabled={isJoining}
               variant="primary"
               text={isJoining ? 'Conectando...' : 'Unirse a Sala'}
             />
@@ -188,24 +245,6 @@ const JoinRoomScreen: React.FC = () => {
               variant="secondary"
               text="Volver"
             />
-          </div>
-        </div>
-
-        <div className="connection-info">
-          <p className="help-text">
-            <strong>Instrucciones:</strong><br/>
-            1. Solicita al host la IP de su servidor<br/>
-            2. El puerto por defecto es 3000<br/>
-            3. El ID de sala por defecto es "default-room"<br/>
-            4. Introduce tu nombre y conecta
-          </p>
-          
-          <div className="connection-status">
-            <span className={`status-indicator ${connectionStatus}`}>
-              Estado: {connectionStatus === 'connected' ? 'Conectado' : 
-                      connectionStatus === 'connecting' ? 'Conectando' :
-                      connectionStatus === 'error' ? 'Error' : 'Desconectado'}
-            </span>
           </div>
         </div>
       </div>

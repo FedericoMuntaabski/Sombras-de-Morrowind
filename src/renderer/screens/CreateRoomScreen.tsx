@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAppStore } from '@renderer/store/appStore';
 import { useRoomStore } from '@renderer/store/roomStore';
 import { useMultiplayerSync, useMultiplayerActions } from '@renderer/hooks/useMultiplayer';
@@ -8,8 +8,8 @@ import './CreateRoomScreen.scss';
 
 const CreateRoomScreen: React.FC = () => {
   const { setCurrentScreen } = useAppStore();
-  const { setPlayerName, playerName } = useRoomStore();
-  const { createRoom } = useMultiplayerActions();
+  const { setPlayerName, playerName, currentRoom } = useRoomStore();
+  const { createRoom, connect } = useMultiplayerActions();
   
   // Initialize multiplayer sync
   useMultiplayerSync();
@@ -18,6 +18,15 @@ const CreateRoomScreen: React.FC = () => {
   const [maxPlayers, setMaxPlayers] = useState(4);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Navigate to waiting room when room is created
+  useEffect(() => {
+    if (currentRoom && isCreating) {
+      logger.info('Room created successfully, navigating to waiting room', 'CreateRoomScreen');
+      setCurrentScreen('waiting');
+      setIsCreating(false);
+    }
+  }, [currentRoom, isCreating, setCurrentScreen]);
 
   const handleCreateRoom = useCallback(async () => {
     setError(null);
@@ -46,16 +55,19 @@ const CreateRoomScreen: React.FC = () => {
     setIsCreating(true);
 
     try {
+      // Primero conectar al servidor
+      await connect('ws://localhost:3000');
+      logger.info('Connected to server', 'CreateRoomScreen');
+      
+      // Luego crear la sala
       createRoom(roomName.trim(), maxPlayers);
       logger.info(`Creating room: ${roomName}`, 'CreateRoomScreen');
       
-      // Navegar a la sala de espera
-      setCurrentScreen('waiting');
+      // No navegamos inmediatamente - esperamos a que useEffect detecte que currentRoom se ha actualizado
     } catch (error) {
       logger.error(`Failed to create room: ${error}`, 'CreateRoomScreen');
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido al crear la sala';
       setError(errorMessage);
-    } finally {
       setIsCreating(false);
     }
   }, [roomName, playerName, maxPlayers, createRoom, setCurrentScreen]);

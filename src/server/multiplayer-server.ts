@@ -22,17 +22,48 @@ const serverConfig = {
   host: process.env.HOST || '0.0.0.0'
 };
 
-// Estado del servidor en memoria
+// Interfaz para conexiones de jugadores
+interface PlayerConnection {
+  playerId: string;
+  playerName: string;
+  socket: WebSocket;
+  lastSeen: number;
+  isReconnecting?: boolean;
+}
+
+// Estado del servidor en memoria - MEJORADO
 class ServerState {
   private rooms = new Map<string, RoomState>();
-  private playerRooms = new Map<string, string>(); // playerId -> roomId
-  private playerSockets = new Map<string, WebSocket>(); // playerId -> WebSocket
+  private playerConnections = new Map<string, PlayerConnection>(); // playerId -> connection
+  private socketToPlayerId = new Map<WebSocket, string>(); // socket -> playerId
+  private heartbeatInterval: NodeJS.Timeout | null = null;
 
-  // Gestión de salas
-  createRoom(roomName: string, hostPlayerName: string, maxPlayers: number = 4): { room: RoomState; hostPlayer: Player } {
+  constructor() {
+    this.startHeartbeat();
+  }
+
+  // Sistema de heartbeat para detectar desconexiones
+  private startHeartbeat() {
+    this.heartbeatInterval = setInterval(() => {
+      const now = Date.now();
+      const timeout = 30000; // 30 segundos
+
+      for (const [playerId, connection] of this.playerConnections) {
+        if (now - connection.lastSeen > timeout) {
+          console.log(`[Server] Player ${connection.playerName} (${playerId}) timed out`);
+          this.handlePlayerDisconnect(playerId, false);
+        }
+      }
+    }, 10000); // Check every 10 seconds
+  }
+
+  // Crear sala
+  createRoom(roomName: string, hostPlayerName: string, maxPlayers: number = 6): { room: RoomState; hostPlayer: Player } {
     const roomId = uuidv4();
+    const hostPlayerId = uuidv4();
+    
     const hostPlayer: Player = {
-      id: uuidv4(),
+      id: hostPlayerId,
       name: hostPlayerName,
       joinedAt: Date.now(),
       isReady: false
@@ -41,6 +72,7 @@ class ServerState {
     const room: RoomState = {
       id: roomId,
       name: roomName,
+      hostId: hostPlayerId,  // Host explícito
       players: [hostPlayer],
       presets: [],
       chat: [],
@@ -50,387 +82,485 @@ class ServerState {
     };
 
     this.rooms.set(roomId, room);
-    this.playerRooms.set(hostPlayer.id, roomId);
-
-    console.log(`[ServerState] Room created: ${roomName} (${roomId}) by ${hostPlayerName}`);
+    console.log(`[Server] Room created: ${roomName} (${roomId}) by ${hostPlayerName}`);
     return { room, hostPlayer };
   }
 
-  joinRoom(roomId: string, playerName: string): { room: RoomState; player: Player } | null {
+  // Unirse a sala con posibilidad de reconexión
+  joinRoom(roomId: string, playerName: string, existingPlayerId?: string): { room: RoomState; player: Player } | null {
     const room = this.rooms.get(roomId);
-    if (!room) {
-      console.log(`[ServerState] Room not found: ${roomId}`);
-      return null;
+    if (!room) return null;
+    
+    // Verificar si es una reconexión
+    if (existingPlayerId) {
+      const existingPlayer = room.players.find(p => p.id === existingPlayerId);
+      if (existingPlayer) {
+        console.log(`[Server] Player ${playerName} (${existingPlayerId}) reconnecting to room ${room.name}`);
+        return { room, player: existingPlayer };
+      }
     }
 
-    if (room.players.length >= room.maxPlayers) {
-      console.log(`[ServerState] Room full: ${roomId}`);
-      return null;
-    }
+    // Nueva conexión
+    if (room.players.length >= room.maxPlayers) return null;
 
-    const player: Player = {
+    const newPlayer: Player = {
       id: uuidv4(),
       name: playerName,
       joinedAt: Date.now(),
       isReady: false
     };
 
-    room.players.push(player);
-    this.playerRooms.set(player.id, roomId);
-
-    console.log(`[ServerState] Player ${playerName} joined room ${room.name} (${roomId})`);
-    return { room, player };
+    room.players.push(newPlayer);
+    console.log(`[Server] Player ${playerName} (${newPlayer.id}) joined room ${room.name}`);
+    return { room, player: newPlayer };
   }
 
-  leaveRoom(playerId: string): { room: RoomState | null; player: Player | null } {
-    const roomId = this.playerRooms.get(playerId);
-    if (!roomId) return { room: null, player: null };
+  // Manejo de desconexión - MEJORADO
+  handlePlayerDisconnect(playerId: string, voluntary: boolean = true) {
+    const connection = this.playerConnections.get(playerId);
+    if (!connection) return;
 
-    const room = this.rooms.get(roomId);
-    if (!room) return { room: null, player: null };
+    // Limpiar conexión
+    this.playerConnections.delete(playerId);
+    this.socketToPlayerId.delete(connection.socket);
 
-    const playerIndex = room.players.findIndex(p => p.id === playerId);
-    if (playerIndex === -1) return { room: null, player: null };
+    // Encontrar la sala del jugador
+    const room = this.findPlayerRoom(playerId);
+    if (!room) return;
 
-    const player = room.players[playerIndex];
-    room.players.splice(playerIndex, 1);
-    this.playerRooms.delete(playerId);
-    this.playerSockets.delete(playerId);
+    const player = room.players.find(p => p.id === playerId);
+    if (!player) return;
 
-    // Si no quedan jugadores, eliminar la sala
-    if (room.players.length === 0) {
-      this.rooms.delete(roomId);
-      console.log(`[ServerState] Room ${room.name} deleted (no players left)`);
-      return { room: null, player };
+    // Si es el host, reasignar host
+    if (room.hostId === playerId) {
+      this.reassignHost(room, playerId);
+    } else {
+      // Jugador normal - remover de la sala solo si es voluntario
+      if (voluntary) {
+        room.players = room.players.filter(p => p.id !== playerId);
+        console.log(`[Server] Player ${player.name} left room ${room.name}`);
+      } else {
+        console.log(`[Server] Player ${player.name} disconnected unexpectedly from room ${room.name} - keeping slot`);
+      }
     }
 
-    console.log(`[ServerState] Player ${player.name} left room ${room.name}`);
-    return { room, player };
+    // Eliminar sala si no quedan jugadores
+    if (room.players.length === 0) {
+      this.rooms.delete(room.id);
+      console.log(`[Server] Room ${room.name} (${room.id}) deleted - no players remaining`);
+    } else {
+      // Notificar a otros jugadores
+      this.broadcastToRoom(room.id, {
+        type: 'PLAYER_LEFT',
+        data: { playerId, playerName: player.name }
+      });
+    }
   }
 
-  addMessage(playerId: string, content: string): { room: RoomState; message: Message } | null {
-    const roomId = this.playerRooms.get(playerId);
-    if (!roomId) return null;
+  // Reasignar host - NUEVO
+  private reassignHost(room: RoomState, formerHostId: string) {
+    // Ordenar jugadores por tiempo de conexión (más antiguo = nuevo host)
+    const remainingPlayers = room.players.filter(p => p.id !== formerHostId);
+    
+    if (remainingPlayers.length === 0) {
+      this.rooms.delete(room.id);
+      console.log(`[Server] Room ${room.name} deleted - no players to reassign host`);
+      return;
+    }
 
+    // El jugador que se conectó primero se convierte en host
+    const newHost = remainingPlayers.sort((a, b) => a.joinedAt - b.joinedAt)[0];
+    room.hostId = newHost.id;
+    
+    console.log(`[Server] Host reassigned in room ${room.name}: ${newHost.name} (${newHost.id})`);
+    
+    // Notificar a todos los jugadores del cambio de host
+    this.broadcastToRoom(room.id, {
+      type: 'HOST_CHANGED',
+      data: { newHostId: newHost.id, newHostName: newHost.name }
+    });
+  }
+
+  // Registro de conexión de jugador
+  registerPlayerConnection(playerId: string, playerName: string, socket: WebSocket) {
+    const connection: PlayerConnection = {
+      playerId,
+      playerName,
+      socket,
+      lastSeen: Date.now()
+    };
+
+    this.playerConnections.set(playerId, connection);
+    this.socketToPlayerId.set(socket, playerId);
+    console.log(`[Server] Player connection registered: ${playerName} (${playerId})`);
+  }
+
+  // Actualizar heartbeat
+  updatePlayerHeartbeat(playerId: string) {
+    const connection = this.playerConnections.get(playerId);
+    if (connection) {
+      connection.lastSeen = Date.now();
+    }
+  }
+
+  // Obtener conexión por socket
+  getPlayerIdBySocket(socket: WebSocket): string | undefined {
+    return this.socketToPlayerId.get(socket);
+  }
+
+  // Encontrar sala de un jugador
+  findPlayerRoom(playerId: string): RoomState | undefined {
+    for (const room of this.rooms.values()) {
+      if (room.players.find(p => p.id === playerId)) {
+        return room;
+      }
+    }
+    return undefined;
+  }
+
+  // Obtener sala por ID
+  getRoom(roomId: string): RoomState | undefined {
+    return this.rooms.get(roomId);
+  }
+
+  // Salas disponibles para unirse
+  getAvailableRooms(): RoomState[] {
+    return Array.from(this.rooms.values())
+      .filter(room => room.status === 'waiting' && room.players.length < room.maxPlayers);
+  }
+
+  // Enviar mensaje a una sala
+  addMessageToRoom(roomId: string, senderId: string, content: string): Message | null {
     const room = this.rooms.get(roomId);
     if (!room) return null;
 
-    const player = room.players.find(p => p.id === playerId);
-    if (!player) return null;
+    const sender = room.players.find(p => p.id === senderId);
+    if (!sender) return null;
 
     const message: Message = {
       id: uuidv4(),
-      senderId: playerId,
-      senderName: player.name,
+      senderId,
+      senderName: sender.name,
+      playerId: senderId,      // Backwards compatibility
+      playerName: sender.name, // Backwards compatibility
       content,
       timestamp: Date.now()
     };
 
     room.chat.push(message);
-
-    console.log(`[ServerState] Message from ${player.name} in ${room.name}: ${content}`);
-    return { room, message };
+    return message;
   }
 
-  updatePreset(playerId: string, preset: string): RoomState | null {
-    const roomId = this.playerRooms.get(playerId);
-    if (!roomId) return null;
-
-    const room = this.rooms.get(roomId);
-    if (!room) return null;
+  // Actualizar preset de jugador
+  updatePlayerPreset(playerId: string, characterPresetId: string): boolean {
+    const room = this.findPlayerRoom(playerId);
+    if (!room) return false;
 
     const player = room.players.find(p => p.id === playerId);
-    if (!player) return null;
+    if (!player) return false;
 
-    player.preset = preset;
-
-    console.log(`[ServerState] Player ${player.name} updated preset to: ${preset}`);
-    return room;
+    player.characterPreset = characterPresetId;
+    return true;
   }
 
-  setPlayerReady(playerId: string, isReady: boolean): RoomState | null {
-    const roomId = this.playerRooms.get(playerId);
-    if (!roomId) return null;
-
-    const room = this.rooms.get(roomId);
-    if (!room) return null;
+  // Actualizar estado listo de jugador
+  updatePlayerReady(playerId: string, isReady: boolean): boolean {
+    const room = this.findPlayerRoom(playerId);
+    if (!room) return false;
 
     const player = room.players.find(p => p.id === playerId);
-    if (!player) return null;
+    if (!player) return false;
 
     player.isReady = isReady;
-
-    console.log(`[ServerState] Player ${player.name} set ready to: ${isReady}`);
-    return room;
+    return true;
   }
 
-  // Gestión de WebSockets
-  registerPlayerSocket(playerId: string, ws: WebSocket): void {
-    this.playerSockets.set(playerId, ws);
-  }
-
-  getPlayerSocket(playerId: string): WebSocket | undefined {
-    return this.playerSockets.get(playerId);
-  }
-
-  getRoomPlayers(roomId: string): Player[] {
+  // Broadcast a una sala
+  broadcastToRoom(roomId: string, event: ServerEvent) {
     const room = this.rooms.get(roomId);
-    return room ? room.players : [];
-  }
+    if (!room) return;
 
-  getRoom(roomId: string): RoomState | undefined {
-    return this.rooms.get(roomId);
-  }
-
-  getAllRooms(): RoomState[] {
-    return Array.from(this.rooms.values());
-  }
-
-  getPlayerRoom(playerId: string): RoomState | undefined {
-    const roomId = this.playerRooms.get(playerId);
-    return roomId ? this.rooms.get(roomId) : undefined;
-  }
-
-  findPlayerBySocket(ws: WebSocket): string | undefined {
-    for (const [playerId, socket] of this.playerSockets.entries()) {
-      if (socket === ws) return playerId;
+    for (const player of room.players) {
+      const connection = this.playerConnections.get(player.id);
+      if (connection && connection.socket.readyState === WebSocket.OPEN) {
+        this.sendToSocket(connection.socket, event);
+      }
     }
-    return undefined;
   }
-}
 
-// Instancia global del estado del servidor
-const serverState = new ServerState();
-
-// Configurar Express
-const app = express();
-app.use(express.json());
-app.use(express.static(path.join(__dirname, '../../dist')));
-app.use('/assets', express.static(path.join(__dirname, '../../assets')));
-
-// CORS para desarrollo
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
-});
-
-// Rutas API
-app.get('/api/health', (_req, res) => {
-  res.json({
-    status: 'OK',
-    rooms: serverState.getAllRooms().length,
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.get('/api/rooms', (_req, res) => {
-  const rooms = serverState.getAllRooms().map(room => ({
-    id: room.id,
-    name: room.name,
-    players: room.players.length,
-    maxPlayers: room.maxPlayers,
-    status: room.status
-  }));
-  res.json(rooms);
-});
-
-// Crear servidor HTTP y WebSocket
-const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
-
-// Utilidades para WebSocket
-function sendToPlayer(playerId: string, event: ServerEvent): void {
-  const ws = serverState.getPlayerSocket(playerId);
-  if (ws && ws.readyState === WebSocket.OPEN) {
+  // Enviar evento a un socket específico
+  private sendToSocket(socket: WebSocket, event: ServerEvent) {
     const message: WebSocketMessage = {
       id: uuidv4(),
       type: event.type,
       data: event.data,
       timestamp: Date.now()
     };
-    ws.send(JSON.stringify(message));
-  }
-}
 
-function broadcastToRoom(roomId: string, event: ServerEvent, excludePlayerId?: string): void {
-  const players = serverState.getRoomPlayers(roomId);
-  for (const player of players) {
-    if (player.id !== excludePlayerId) {
-      sendToPlayer(player.id, event);
+    socket.send(JSON.stringify(message));
+  }
+
+  // Enviar a un jugador específico
+  sendToPlayer(playerId: string, event: ServerEvent) {
+    const connection = this.playerConnections.get(playerId);
+    if (connection && connection.socket.readyState === WebSocket.OPEN) {
+      this.sendToSocket(connection.socket, event);
     }
   }
-  console.log(`[Broadcast] Sent ${event.type} to ${players.length - (excludePlayerId ? 1 : 0)} players in room ${roomId}`);
+
+  // Cleanup al cerrar servidor
+  destroy() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+    }
+  }
 }
 
-function sendError(playerId: string, message: string, code?: string): void {
-  sendToPlayer(playerId, { type: 'ERROR', data: { message, code } });
-}
+// Estado global del servidor
+const serverState = new ServerState();
 
-// Manejo de conexiones WebSocket
-wss.on('connection', (ws: WebSocket) => {
-  console.log('[WebSocket] New connection established');
-  let playerId: string | undefined;
+// Crear aplicación Express
+const app = express();
+const server = http.createServer(app);
 
-  ws.on('message', (data: Buffer) => {
+// Configurar WebSocket Server
+const wss = new WebSocketServer({ server });
+
+// Middleware
+app.use(express.json());
+app.use(express.static(path.join(__dirname, '../renderer')));
+
+// ENDPOINTS HTTP
+
+// Health check
+app.get('/api/health', (_req, res) => {
+  res.json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    rooms: serverState.getAvailableRooms().length 
+  });
+});
+
+// Obtener salas disponibles
+app.get('/api/rooms', (_req, res) => {
+  const rooms = serverState.getAvailableRooms().map(room => ({
+    id: room.id,
+    name: room.name,
+    players: room.players.length,
+    maxPlayers: room.maxPlayers,
+    status: room.status
+  }));
+  
+  res.json({ rooms });
+});
+
+// MANEJO DE WEBSOCKETS
+
+wss.on('connection', (socket: WebSocket) => {
+  console.log('[Server] New WebSocket connection');
+
+  socket.on('message', (data: Buffer) => {
     try {
       const message: WebSocketMessage = JSON.parse(data.toString());
-      console.log(`[WebSocket] Received ${message.type} from ${playerId || 'unknown'}`);
+      const event = message as ClientEvent;
       
-      const clientEvent = message as unknown as ClientEvent;
-      handleClientEvent(ws, clientEvent, message.id);
+      handleClientMessage(socket, event);
     } catch (error) {
-      console.error('[WebSocket] Error parsing message:', error);
-      sendError(playerId || 'unknown', 'Invalid message format');
+      console.error('[Server] Error parsing message:', error);
+      socket.send(JSON.stringify({
+        type: 'ERROR',
+        data: { message: 'Invalid message format' }
+      }));
     }
   });
 
-  ws.on('close', () => {
-    console.log(`[WebSocket] Connection closed for player ${playerId}`);
+  socket.on('close', () => {
+    const playerId = serverState.getPlayerIdBySocket(socket);
     if (playerId) {
-      handlePlayerDisconnect(playerId);
+      console.log(`[Server] WebSocket closed for player ${playerId}`);
+      serverState.handlePlayerDisconnect(playerId, false); // Involuntary disconnect
     }
   });
 
-  // Manejo de eventos del cliente
-  function handleClientEvent(ws: WebSocket, event: ClientEvent, messageId: string): void {
+  socket.on('error', (error) => {
+    console.error('[Server] WebSocket error:', error);
+    const playerId = serverState.getPlayerIdBySocket(socket);
+    if (playerId) {
+      serverState.handlePlayerDisconnect(playerId, false);
+    }
+  });
+});
+
+// Manejar mensajes del cliente
+function handleClientMessage(socket: WebSocket, event: ClientEvent) {
+  try {
     switch (event.type) {
       case 'CREATE_ROOM':
-        handleCreateRoom(ws, event.data, messageId);
+        handleCreateRoom(socket, event.data);
         break;
+        
       case 'JOIN_ROOM':
-        handleJoinRoom(ws, event.data, messageId);
+        handleJoinRoom(socket, event.data);
         break;
+        
       case 'LEAVE_ROOM':
-        handleLeaveRoom();
+        handleLeaveRoom(socket);
         break;
+        
       case 'SEND_MESSAGE':
-        handleSendMessage(event.data);
+        handleSendMessage(socket, event.data);
         break;
+        
       case 'UPDATE_PRESET':
-        handleUpdatePreset(event.data);
+        handleUpdatePreset(socket, event.data);
         break;
+        
       case 'SET_READY':
-        handleSetReady(event.data);
+        handleSetReady(socket, event.data);
         break;
+        
+      case 'HEARTBEAT':
+        handleHeartbeat(socket);
+        break;
+
       default:
-        console.log(`[WebSocket] Unknown event type: ${(event as any).type}`);
-        sendError(playerId || 'unknown', 'Unknown event type');
+        console.warn(`[Server] Unknown event type: ${(event as any).type}`);
+        break;
     }
+  } catch (error) {
+    console.error('[Server] Error handling client message:', error);
+    socket.send(JSON.stringify({
+      type: 'ERROR',
+      data: { message: 'Server error processing request' }
+    }));
   }
+}
 
-  function handleCreateRoom(ws: WebSocket, data: { roomName: string; playerName: string; maxPlayers?: number }, _messageId: string): void {
-    try {
-      const result = serverState.createRoom(data.roomName, data.playerName, data.maxPlayers);
-      playerId = result.hostPlayer.id;
-      serverState.registerPlayerSocket(playerId, ws);
+// Handlers específicos para cada tipo de evento
 
-      // Enviar estado inicial de la sala al host
-      sendToPlayer(playerId, { type: 'ROOM_STATE', data: result.room });
-      
-      console.log(`[CreateRoom] Room ${result.room.name} created by ${data.playerName}`);
-    } catch (error) {
-      console.error('[CreateRoom] Error:', error);
-      sendError(playerId || 'unknown', 'Failed to create room');
-    }
+function handleCreateRoom(socket: WebSocket, data: { roomName: string; playerName: string; maxPlayers?: number }) {
+  const { roomName, playerName, maxPlayers = 6 } = data;
+  
+  const { room, hostPlayer } = serverState.createRoom(roomName, playerName, maxPlayers);
+  serverState.registerPlayerConnection(hostPlayer.id, playerName, socket);
+  
+  const response: WebSocketMessage = {
+    id: uuidv4(),
+    type: 'ROOM_CREATED',
+    data: { room, playerId: hostPlayer.id },
+    timestamp: Date.now()
+  };
+  
+  socket.send(JSON.stringify(response));
+}
+
+function handleJoinRoom(socket: WebSocket, data: { roomId: string; playerName: string; existingPlayerId?: string }) {
+  const { roomId, playerName, existingPlayerId } = data;
+  
+  const result = serverState.joinRoom(roomId, playerName, existingPlayerId);
+  if (!result) {
+    const errorResponse: WebSocketMessage = {
+      id: uuidv4(),
+      type: 'ERROR',
+      data: { message: 'Could not join room' },
+      timestamp: Date.now()
+    };
+    socket.send(JSON.stringify(errorResponse));
+    return;
   }
-
-  function handleJoinRoom(ws: WebSocket, data: { roomId: string; playerName: string }, _messageId: string): void {
-    try {
-      const result = serverState.joinRoom(data.roomId, data.playerName);
-      if (!result) {
-        sendError(playerId || 'unknown', 'Cannot join room');
-        return;
-      }
-
-      playerId = result.player.id;
-      serverState.registerPlayerSocket(playerId, ws);
-
-      // Enviar estado completo de la sala al nuevo jugador
-      sendToPlayer(playerId, { type: 'ROOM_STATE', data: result.room });
-
-      // Notificar a otros jugadores
-      broadcastToRoom(result.room.id, { 
-        type: 'PLAYER_JOINED', 
-        data: { player: result.player } 
-      }, playerId);
-
-      console.log(`[JoinRoom] Player ${data.playerName} joined room ${result.room.name}`);
-    } catch (error) {
-      console.error('[JoinRoom] Error:', error);
-      sendError(playerId || 'unknown', 'Failed to join room');
-    }
-  }
-
-  function handleLeaveRoom(): void {
-    if (!playerId) return;
-    handlePlayerDisconnect(playerId);
-  }
-
-  function handleSendMessage(data: { content: string }): void {
-    if (!playerId) return;
-
-    const result = serverState.addMessage(playerId, data.content);
-    if (!result) {
-      sendError(playerId, 'Failed to send message');
-      return;
-    }
-
-    // Broadcast del mensaje a toda la sala
-    broadcastToRoom(result.room.id, { 
-      type: 'NEW_MESSAGE', 
-      data: { message: result.message } 
+  
+  const { room, player } = result;
+  serverState.registerPlayerConnection(player.id, playerName, socket);
+  
+  // Enviar estado de la sala al jugador que se une
+  const joinResponse: WebSocketMessage = {
+    id: uuidv4(),
+    type: 'ROOM_JOINED',
+    data: { room, playerId: player.id },
+    timestamp: Date.now()
+  };
+  socket.send(JSON.stringify(joinResponse));
+  
+  // Notificar a otros jugadores si es un nuevo jugador
+  if (!existingPlayerId) {
+    serverState.broadcastToRoom(roomId, {
+      type: 'PLAYER_JOINED',
+      data: { player }
     });
   }
+  
+  // Enviar estado actualizado a todos
+  serverState.broadcastToRoom(roomId, {
+    type: 'ROOM_STATE',
+    data: room
+  });
+}
 
-  function handleUpdatePreset(data: { preset: string }): void {
-    if (!playerId) return;
+function handleLeaveRoom(socket: WebSocket) {
+  const playerId = serverState.getPlayerIdBySocket(socket);
+  if (playerId) {
+    serverState.handlePlayerDisconnect(playerId, true); // Voluntary disconnect
+  }
+}
 
-    const room = serverState.updatePreset(playerId, data.preset);
-    if (!room) {
-      sendError(playerId, 'Failed to update preset');
-      return;
-    }
-
-    // Broadcast de la actualización de preset
-    broadcastToRoom(room.id, { 
-      type: 'PRESET_UPDATED', 
-      data: { playerId, preset: data.preset } 
+function handleSendMessage(socket: WebSocket, data: { content: string }) {
+  const playerId = serverState.getPlayerIdBySocket(socket);
+  if (!playerId) return;
+  
+  const room = serverState.findPlayerRoom(playerId);
+  if (!room) return;
+  
+  const message = serverState.addMessageToRoom(room.id, playerId, data.content);
+  if (message) {
+    serverState.broadcastToRoom(room.id, {
+      type: 'NEW_MESSAGE',
+      data: { message }
     });
   }
+}
 
-  function handleSetReady(data: { isReady: boolean }): void {
-    if (!playerId) return;
-
-    const room = serverState.setPlayerReady(playerId, data.isReady);
-    if (!room) {
-      sendError(playerId, 'Failed to set ready state');
-      return;
-    }
-
-    // Broadcast del cambio de estado ready
-    broadcastToRoom(room.id, { 
-      type: 'PLAYER_READY_CHANGED', 
-      data: { playerId, isReady: data.isReady } 
-    });
-  }
-
-  function handlePlayerDisconnect(playerId: string): void {
-    const result = serverState.leaveRoom(playerId);
-    if (result.room && result.player) {
-      // Notificar a otros jugadores de la desconexión
-      broadcastToRoom(result.room.id, { 
-        type: 'PLAYER_LEFT', 
-        data: { playerId, playerName: result.player.name } 
+function handleUpdatePreset(socket: WebSocket, data: { characterPresetId: string }) {
+  const playerId = serverState.getPlayerIdBySocket(socket);
+  if (!playerId) return;
+  
+  const success = serverState.updatePlayerPreset(playerId, data.characterPresetId);
+  if (success) {
+    const room = serverState.findPlayerRoom(playerId);
+    if (room) {
+      serverState.broadcastToRoom(room.id, {
+        type: 'PRESET_UPDATED',
+        data: { playerId, characterPresetId: data.characterPresetId }
       });
     }
   }
-});
+}
+
+function handleSetReady(socket: WebSocket, data: { isReady: boolean }) {
+  const playerId = serverState.getPlayerIdBySocket(socket);
+  if (!playerId) return;
+  
+  const success = serverState.updatePlayerReady(playerId, data.isReady);
+  if (success) {
+    const room = serverState.findPlayerRoom(playerId);
+    if (room) {
+      serverState.broadcastToRoom(room.id, {
+        type: 'PLAYER_READY_CHANGED',
+        data: { playerId, isReady: data.isReady }
+      });
+    }
+  }
+}
+
+function handleHeartbeat(socket: WebSocket) {
+  const playerId = serverState.getPlayerIdBySocket(socket);
+  if (playerId) {
+    serverState.updatePlayerHeartbeat(playerId);
+    socket.send(JSON.stringify({
+      type: 'HEARTBEAT_ACK',
+      data: { timestamp: Date.now() }
+    }));
+  }
+}
 
 // Iniciar servidor
 server.listen(serverConfig.port, serverConfig.host, () => {
@@ -441,15 +571,21 @@ server.listen(serverConfig.port, serverConfig.host, () => {
   console.log(`[Server] 🏰 Sombras de Morrowind multiplayer ready!`);
 });
 
-// Manejo de cierre graceful
+// Manejo de cierre del servidor
 process.on('SIGINT', () => {
-  console.log('[Server] 🛑 Shutting down server...');
-  server.close();
-  process.exit(0);
+  console.log('\n[Server] Shutting down gracefully...');
+  serverState.destroy();
+  server.close(() => {
+    console.log('[Server] Server closed');
+    process.exit(0);
+  });
 });
 
 process.on('SIGTERM', () => {
-  console.log('[Server] 🛑 Terminating server...');
-  server.close();
-  process.exit(0);
+  console.log('\n[Server] Received SIGTERM, shutting down gracefully...');
+  serverState.destroy();
+  server.close(() => {
+    console.log('[Server] Server closed');
+    process.exit(0);
+  });
 });

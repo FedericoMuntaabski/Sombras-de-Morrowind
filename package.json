@@ -12,7 +12,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:integration": "jest src/test/multiplayer.integration.test.ts",
-    "build:main": "tsc src/main/main.ts --outDir dist --target ES2020 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck",
+    "build:main": "webpack --config webpack.main.config.js --mode development",
     "build:server": "tsc -p tsconfig.server.json",
     "build:renderer": "webpack --config webpack.renderer.config.js --mode production",
     "build:prod": "npm run build:main && npm run build:server && npm run build:renderer",

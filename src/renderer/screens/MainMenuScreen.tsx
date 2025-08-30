@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAppStore } from '@renderer/store/appStore';
 import { useAudioStore } from '@renderer/store/audioStore';
+import { useRoomStore } from '@renderer/store/roomStore';
 import { logger } from '@shared/utils/logger';
 import MedievalButton from '@renderer/components/ui/MedievalButton';
 import './MainMenuScreen.scss';
@@ -8,6 +9,10 @@ import './MainMenuScreen.scss';
 const MainMenuScreen: React.FC = () => {
   const { setCurrentScreen } = useAppStore();
   const { initializeAudio, isInitialized } = useAudioStore();
+  const { clearRoom } = useRoomStore();
+  
+  // Estado para mostrar opción de reconexión
+  const [showReconnect, setShowReconnect] = useState(false);
 
   // Inicializar audio al cargar el menú principal
   useEffect(() => {
@@ -18,14 +23,57 @@ const MainMenuScreen: React.FC = () => {
     }
   }, [initializeAudio, isInitialized]);
 
+  // Verificar si hay datos de sesión anterior
+  useEffect(() => {
+    const lastPlayerId = localStorage.getItem('lastPlayerId');
+    const lastPlayerName = localStorage.getItem('lastPlayerName');
+    const lastRoomId = localStorage.getItem('lastRoomId');
+    
+    if (lastPlayerId && lastPlayerName && lastRoomId) {
+      setShowReconnect(true);
+    }
+  }, []);
+
   const handleCreateRoom = (): void => {
     logger.info('Navigating to Create Room', 'MainMenu');
+    clearRoom(); // Limpiar sesión anterior
     setCurrentScreen('createRoom');
   };
 
   const handleJoinRoom = (): void => {
     logger.info('Navigating to Join Room', 'MainMenu');
+    clearRoom(); // Limpiar sesión anterior
     setCurrentScreen('joinRoom');
+  };
+
+  const handleReconnect = (): void => {
+    const lastPlayerId = localStorage.getItem('lastPlayerId');
+    const lastPlayerName = localStorage.getItem('lastPlayerName');
+    const lastRoomId = localStorage.getItem('lastRoomId');
+    
+    if (lastPlayerId && lastPlayerName && lastRoomId) {
+      logger.info(`Attempting to reconnect as ${lastPlayerName} (${lastPlayerId}) to room ${lastRoomId}`, 'MainMenu');
+      
+      // TODO: Implementar reconexión automática
+      // Por ahora, navegar a join room con datos pre-filled
+      localStorage.setItem('reconnectData', JSON.stringify({
+        playerId: lastPlayerId,
+        playerName: lastPlayerName,
+        roomId: lastRoomId
+      }));
+      
+      setCurrentScreen('joinRoom');
+    }
+  };
+
+  const handleClearSession = (): void => {
+    localStorage.removeItem('lastPlayerId');
+    localStorage.removeItem('lastPlayerName');
+    localStorage.removeItem('lastRoomId');
+    localStorage.removeItem('reconnectData');
+    clearRoom();
+    setShowReconnect(false);
+    logger.info('Session data cleared', 'MainMenu');
   };
 
   const handleCreateCharacter = (): void => {
@@ -59,6 +107,27 @@ const MainMenuScreen: React.FC = () => {
         </div>
 
         <nav className="menu-navigation">
+          {/* Reconexión si hay sesión anterior */}
+          {showReconnect && (
+            <div className="reconnect-section">
+              <p className="reconnect-message">Tienes una sesión anterior</p>
+              <div className="reconnect-buttons">
+                <MedievalButton
+                  text="🔄 Reconectar"
+                  onClick={handleReconnect}
+                  variant="primary"
+                  size="medium"
+                />
+                <MedievalButton
+                  text="❌ Nueva Sesión"
+                  onClick={handleClearSession}
+                  variant="secondary"
+                  size="small"
+                />
+              </div>
+            </div>
+          )}
+
           <MedievalButton
             text="Crear Personaje"
             onClick={handleCreateCharacter}

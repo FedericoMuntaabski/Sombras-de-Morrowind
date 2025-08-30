@@ -7,7 +7,9 @@ if (typeof window !== 'undefined') {
 
 // Exponer require globalmente para webpack-dev-server en desarrollo
 if (process.env.NODE_ENV === 'development') {
-  (window as any).require = require;
+  // Avoid webpack static analysis warning by using dynamic property access
+  const nodeRequire = (global as any).require || eval('require');
+  (window as any).require = nodeRequire;
   (window as any).module = module;
   (window as any).exports = exports;
 }

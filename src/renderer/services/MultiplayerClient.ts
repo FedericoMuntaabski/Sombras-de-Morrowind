@@ -170,10 +170,10 @@ export class MultiplayerClient {
     });
   }
 
-  public updatePreset(preset: string): void {
+  public updatePreset(characterPresetId: string): void {
     this.sendEvent({
       type: 'UPDATE_PRESET',
-      data: { preset }
+      data: { characterPresetId }
     });
   }
 
@@ -190,11 +190,20 @@ export class MultiplayerClient {
       case 'ROOM_STATE':
         this.emit('roomState', event.data);
         break;
+      case 'ROOM_CREATED':
+        this.emit('roomCreated', event.data);
+        break;
+      case 'ROOM_JOINED':
+        this.emit('roomJoined', event.data);
+        break;
       case 'PLAYER_JOINED':
         this.emit('playerJoined', event.data.player);
         break;
       case 'PLAYER_LEFT':
         this.emit('playerLeft', event.data);
+        break;
+      case 'HOST_CHANGED':
+        this.emit('hostChanged', event.data);
         break;
       case 'NEW_MESSAGE':
         this.emit('newMessage', event.data.message);
@@ -204,6 +213,9 @@ export class MultiplayerClient {
         break;
       case 'PLAYER_READY_CHANGED':
         this.emit('playerReadyChanged', event.data);
+        break;
+      case 'HEARTBEAT_ACK':
+        // Handle heartbeat acknowledgment
         break;
       case 'ERROR':
         this.emit('serverError', event.data);

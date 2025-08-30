@@ -9,22 +9,13 @@ module.exports = {
   externals: {}, // Forzar que no haya externals
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: process.env.NODE_ENV === 'production' ? '[name].[contenthash].js' : 'renderer.js',
+    filename: process.env.NODE_ENV === 'production' ? '[name].[contenthash].js' : '[name].js',
     publicPath: process.env.NODE_ENV === 'production' ? './' : '/',
     clean: true, // Limpiar dist en cada build
   },
-  // Optimizaciones de performance
+  // Optimizaciones de performance - simplificadas para evitar conflictos
   optimization: {
-    splitChunks: {
-      chunks: 'all',
-      cacheGroups: {
-        vendor: {
-          test: /[\\/]node_modules[\\/]/,
-          name: 'vendors',
-          chunks: 'all',
-        },
-      },
-    },
+    splitChunks: false, // Deshabilitado para desarrollo para evitar conflictos
     usedExports: true,
     sideEffects: false,
   },

@@ -176,12 +176,13 @@ async function startMultiplayerTestingEnvironment() {
 
     processes.push({ name: 'Webpack-Dev', process: webpackProcess });
 
+    let webpackReady = false;
+
     webpackProcess.stdout.on('data', (data) => {
       const output = data.toString().trim();
-      if (output.includes('webpack compiled')) {
+      if (output.includes('webpack compiled') || output.includes('Compiled successfully')) {
         log(`[📦 Webpack] ✅ Compilación completada`, colors.green);
-      } else if (output.includes('Compiled successfully')) {
-        log(`[📦 Webpack] ✅ Compilado exitosamente`, colors.green);
+        webpackReady = true;
       } else if (output) {
         log(`[📦 Webpack] ${output}`, colors.magenta);
       }
@@ -194,8 +195,24 @@ async function startMultiplayerTestingEnvironment() {
       }
     });
 
-    // Esperar que webpack compile
-    await new Promise(resolve => setTimeout(resolve, 8000));
+    // Esperar que webpack compile con verificación inteligente
+    log('⏳ Esperando compilación de Webpack...', colors.yellow);
+    await new Promise(resolve => {
+      const checkInterval = setInterval(() => {
+        if (webpackReady) {
+          clearInterval(checkInterval);
+          log('✅ Webpack listo para Electron', colors.green);
+          resolve();
+        }
+      }, 1000);
+      
+      // Timeout de seguridad más largo
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        log('⚠️ Timeout de Webpack - continuando (puede que haya errores)...', colors.yellow);
+        resolve();
+      }, 20000);
+    });
 
     // 5. Iniciar Electron HOST
     log('🏠 Iniciando Electron HOST (Creador de sala)...', colors.yellow);
